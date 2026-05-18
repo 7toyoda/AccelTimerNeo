@@ -159,7 +159,7 @@
 <script>
 'use strict';
 
-const VERSION = 'v0.4.0';
+const VERSION = 'v0.4.1';
 const BUILD_DATE = '2026-05-19';
 
 const STATES = {
@@ -302,16 +302,8 @@ function handlePosition(pos) {
         app.lastPosition.lat, app.lastPosition.lon,
         pos.coords.latitude, pos.coords.longitude
       );
-      const computedMs = dist / dt;
-      // GPS精度より十分大きい移動でないとノイズに埋もれる
-      const minMove = Math.max(2, (app.accuracy || 0) * 0.3);
-      if (dist > minMove) {
-        speedKmh = computedMs * 3.6;
-        app.speedSource = 'CALC';
-      } else {
-        speedKmh = 0;
-        app.speedSource = 'CALC';
-      }
+      speedKmh = (dist / dt) * 3.6;
+      app.speedSource = 'CALC';
     } else {
       speedKmh = 0;
       app.speedSource = 'CALC';
