@@ -30,7 +30,6 @@
   .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
   .title-small { font-family: "JetBrains Mono", monospace; font-size: 10px; letter-spacing: 0.3em; color: #6B7280; font-weight: 700; }
   .title { font-size: 22px; font-weight: 800; margin-top: 2px; letter-spacing: -0.02em; }
-  .version { font-family: "JetBrains Mono", monospace; font-size: 9px; color: #4B5563; letter-spacing: 0.1em; margin-top: 4px; font-weight: 600; }
   .gps-indicator { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #9CA3AF; font-family: "JetBrains Mono", monospace; margin-top: 6px; }
   .gps-dot { width: 6px; height: 6px; border-radius: 50%; background: #6B7280; box-shadow: 0 0 6px #6B7280; transition: all 0.3s; }
 
@@ -103,7 +102,6 @@
     <div>
       <div class="title-small">0 → 100 KM/H</div>
       <div class="title">加速タイマー</div>
-      <div class="version" id="versionInfo"></div>
     </div>
     <div class="gps-indicator">
       <div class="gps-dot" id="gpsDot"></div>
@@ -146,22 +144,13 @@
 
   <div class="note">
     <div class="note-label">NOTE</div>
-    GPSの精度・更新頻度に依存するため、専用機材とは多少誤差があります。安全な場所で交通法規を守って計測してください。
+    GPSの精度・更新頻度に依存するため、専用機材とは多少誤差があります。安全な場所で交通法規を守って計測してください。HTTPS環境または<code style="color:#9CA3AF">file://</code>で開いてください。
   </div>
 
 <script>
 'use strict';
 
-const VERSION = 'v0.2.0-original';
-const BUILD_DATE = '2026-05-19';
-
-const STATES = {
-  IDLE: 'idle',
-  ARMING: 'arming',
-  ARMED: 'armed',
-  RUNNING: 'running',
-  FINISHED: 'finished'
-};
+const STATES = { IDLE: 'idle', ARMING: 'arming', ARMED: 'armed', RUNNING: 'running', FINISHED: 'finished' };
 const SPLIT_TARGETS = [50, 80, 100];
 const START_THRESHOLD_KMH = 1.5;
 const TARGET_KMH = 100;
@@ -184,6 +173,7 @@ const app = {
   showHistory: false,
 };
 
+// ---- Storage ----
 function loadHistory() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -194,6 +184,7 @@ function saveHistory() {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(app.history)); } catch (e) {}
 }
 
+// ---- Wake lock ----
 async function acquireWakeLock() {
   try { if ('wakeLock' in navigator) app.wakeLock = await navigator.wakeLock.request('screen'); } catch (e) {}
 }
@@ -201,13 +192,14 @@ async function releaseWakeLock() {
   if (app.wakeLock) { try { await app.wakeLock.release(); } catch (e) {} app.wakeLock = null; }
 }
 
+// ---- GPS handling ----
 function startMeasurement() {
   if (!navigator.geolocation) {
     showError('お使いの端末はGPSに対応していません');
     return;
   }
   if (!window.isSecureContext) {
-    showError('GPSはHTTPSまたはfile://環境でのみ動作します。');
+    showError('GPSはHTTPSまたはfile://環境でのみ動作します。このページをHTTPSで開くか、ファイルとして保存してください。');
     return;
   }
   hideError();
@@ -222,16 +214,18 @@ function startMeasurement() {
   if (app.watchId !== null) navigator.geolocation.clearWatch(app.watchId);
 
   app.watchId = navigator.geolocation.watchPosition(
-    function(pos) {
-      if (app.state === STATES.ARMING) setState(STATES.ARMED);
+    (pos) => {
+      if (app.state === STATES.ARMING) {
+        setState(STATES.ARMED);
+      }
       handlePosition(pos);
     },
-    function(err) {
+    (err) => {
       let msg = 'GPSエラー';
-      if (err.code === 1) msg = '位置情報のアクセスが拒否されました。';
+      if (err.code === 1) msg = '位置情報のアクセスが拒否されました。ブラウザの設定で許可してください。';
       else if (err.code === 2) msg = '現在位置を取得できません。屋外でお試しください。';
       else if (err.code === 3) msg = 'GPS取得がタイムアウトしました。';
-      else msg = 'GPSエラー: ' + err.message;
+      else msg = `GPSエラー: ${err.message}`;
       showError(msg);
       setState(STATES.IDLE);
     },
@@ -290,23 +284,29 @@ function handlePosition(pos) {
         if (target === TARGET_KMH) {
           app.elapsedMs = splitMs;
           setState(STATES.FINISHED);
-          saveResult(splitMs, Object.assign({}, app.splits));
+          saveResult(splitMs, { ...app.splits });
         }
       }
     }
   }
 
-  app.lastSample = { speedKmh: speedKmh, time: now };
+  app.lastSample = { speedKmh, time: now };
   render();
 }
 
 function saveResult(finalMs, allSplits) {
-  const entry = { id: Date.now(), time: finalMs, splits: allSplits, date: new Date().toISOString() };
-  app.history = [entry].concat(app.history).slice(0, 20);
+  const entry = {
+    id: Date.now(),
+    time: finalMs,
+    splits: allSplits,
+    date: new Date().toISOString(),
+  };
+  app.history = [entry, ...app.history].slice(0, 20);
   saveHistory();
   releaseWakeLock();
 }
 
+// ---- State management ----
 function setState(newState) {
   app.state = newState;
   if (newState === STATES.RUNNING) {
@@ -327,7 +327,8 @@ function rafLoop() {
   app.rafId = requestAnimationFrame(rafLoop);
 }
 
-const $ = function(id) { return document.getElementById(id); };
+// ---- Rendering ----
+const $ = (id) => document.getElementById(id);
 
 function formatTime(ms) { return (ms / 1000).toFixed(2); }
 
@@ -336,43 +337,45 @@ function renderGPS() {
   const color = !acc ? '#6B7280' : acc < 10 ? '#34D399' : acc < 30 ? '#FCD34D' : '#F87171';
   const dot = $('gpsDot');
   dot.style.background = color;
-  dot.style.boxShadow = '0 0 6px ' + color;
-  $('gpsAccuracy').textContent = acc ? '±' + acc.toFixed(0) + 'm' : '--';
+  dot.style.boxShadow = `0 0 6px ${color}`;
+  $('gpsAccuracy').textContent = acc ? `±${acc.toFixed(0)}m` : '--';
 }
 
 function renderState() {
   const labels = {
-    'idle': '待機中',
-    'arming': 'GPS取得中',
-    'armed': '発進待ち',
-    'running': '計測中',
-    'finished': '完了'
+    [STATES.IDLE]: '待機中',
+    [STATES.ARMING]: 'GPS取得中',
+    [STATES.ARMED]: '発進待ち',
+    [STATES.RUNNING]: '計測中',
+    [STATES.FINISHED]: '完了',
   };
   const colors = {
-    'idle': '#6B7280',
-    'arming': '#FCD34D',
-    'armed': '#FCD34D',
-    'running': '#22D3EE',
-    'finished': '#34D399'
+    [STATES.IDLE]: '#6B7280',
+    [STATES.ARMING]: '#FCD34D',
+    [STATES.ARMED]: '#FCD34D',
+    [STATES.RUNNING]: '#22D3EE',
+    [STATES.FINISHED]: '#34D399',
   };
   const c = colors[app.state];
   $('stateLabel').textContent = labels[app.state];
   const badge = $('stateBadge');
-  badge.style.background = c + '15';
-  badge.style.borderColor = c + '40';
+  badge.style.background = `${c}15`;
+  badge.style.borderColor = `${c}40`;
   badge.style.color = c;
   const dot = $('stateDot');
   dot.style.background = c;
   dot.classList.toggle('pulse', app.state === STATES.RUNNING || app.state === STATES.ARMED);
 
+  // messages
   $('msgArmed').classList.toggle('hidden', app.state !== STATES.ARMED);
   if (app.state === STATES.FINISHED) {
-    $('msgFinished').textContent = '🏁 計測完了 — ' + formatTime(app.elapsedMs) + '秒';
+    $('msgFinished').textContent = `🏁 計測完了 — ${formatTime(app.elapsedMs)}秒`;
     $('msgFinished').classList.remove('hidden');
   } else {
     $('msgFinished').classList.add('hidden');
   }
 
+  // button
   const btn = $('btnAction');
   if (app.state === STATES.IDLE || app.state === STATES.FINISHED) {
     btn.textContent = app.state === STATES.FINISHED ? 'もう一度' : '計測開始';
@@ -385,6 +388,7 @@ function renderState() {
     btn.classList.add('stop');
   }
 
+  // timer block class
   const tb = $('timerBlock');
   tb.classList.toggle('running', app.state === STATES.RUNNING);
   tb.classList.toggle('finished', app.state === STATES.FINISHED);
@@ -403,12 +407,12 @@ function renderTimer() {
 
 function renderSplits() {
   const container = $('splits');
-  container.innerHTML = SPLIT_TARGETS.map(function(t) {
+  container.innerHTML = SPLIT_TARGETS.map(t => {
     const has = app.splits[t] !== undefined;
-    return '<div class="split' + (has ? ' done' : '') + '">' +
-      '<div class="split-label">0→' + t + '</div>' +
-      '<div class="split-value">' + (has ? formatTime(app.splits[t]) : '—.——') + '</div>' +
-    '</div>';
+    return `<div class="split${has ? ' done' : ''}">
+      <div class="split-label">0→${t}</div>
+      <div class="split-value">${has ? formatTime(app.splits[t]) : '—.——'}</div>
+    </div>`;
   }).join('');
 }
 
@@ -423,27 +427,25 @@ function renderHistory() {
     list.innerHTML = '<div class="history-empty">記録がありません</div>';
     return;
   }
-  const best = Math.min.apply(null, app.history.map(function(h){return h.time;}));
-  let html = app.history.map(function(e) {
-    const date = new Date(e.date);
-    const isBest = e.time === best;
-    const md = date.toLocaleDateString('ja-JP', { month: '2-digit', day: '2-digit' });
-    const hm = date.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
-    const s50 = e.splits && e.splits[50] !== undefined ? formatTime(e.splits[50]) : '—';
-    const s80 = e.splits && e.splits[80] !== undefined ? formatTime(e.splits[80]) : '—';
-    return '<div class="history-item">' +
-      '<div>' +
-        '<div class="history-time-row">' +
-          '<div class="history-time' + (isBest ? ' best' : '') + '">' + formatTime(e.time) + 's</div>' +
-          (isBest ? '<span class="badge-best">BEST</span>' : '') +
-        '</div>' +
-        '<div class="history-splits">50: ' + s50 + ' · 80: ' + s80 + '</div>' +
-      '</div>' +
-      '<div class="history-date">' + md + '<br>' + hm + '</div>' +
-    '</div>';
+  const best = Math.min(...app.history.map(h => h.time));
+  let html = app.history.map((entry) => {
+    const date = new Date(entry.date);
+    const isBest = entry.time === best;
+    return `<div class="history-item">
+      <div>
+        <div class="history-time-row">
+          <div class="history-time${isBest ? ' best' : ''}">${formatTime(entry.time)}s</div>
+          ${isBest ? '<span class="badge-best">BEST</span>' : ''}
+        </div>
+        <div class="history-splits">50: ${entry.splits?.[50] !== undefined ? formatTime(entry.splits[50]) : '—'} · 80: ${entry.splits?.[80] !== undefined ? formatTime(entry.splits[80]) : '—'}</div>
+      </div>
+      <div class="history-date">
+        ${date.toLocaleDateString('ja-JP', { month: '2-digit', day: '2-digit' })}<br>
+        ${date.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}
+      </div>
+    </div>`;
   }).join('');
-  html += '<button class="btn-clear' + (app.confirmClear ? ' confirm' : '') + '" id="btnClear">' +
-    (app.confirmClear ? 'もう一度タップで削除' : '履歴を削除') + '</button>';
+  html += `<button class="btn-clear${app.confirmClear ? ' confirm' : ''}" id="btnClear">${app.confirmClear ? 'もう一度タップで削除' : '履歴を削除'}</button>`;
   list.innerHTML = html;
   $('btnClear').onclick = handleClearHistory;
 }
@@ -465,7 +467,7 @@ function handleClearHistory() {
     app.confirmClear = true;
     renderHistory();
     if (app.confirmClearTimer) clearTimeout(app.confirmClearTimer);
-    app.confirmClearTimer = setTimeout(function() { app.confirmClear = false; renderHistory(); }, 3000);
+    app.confirmClearTimer = setTimeout(() => { app.confirmClear = false; renderHistory(); }, 3000);
     return;
   }
   app.history = [];
@@ -475,24 +477,25 @@ function handleClearHistory() {
   renderHistory();
 }
 
-$('btnAction').addEventListener('click', function() {
+// ---- Wire events ----
+$('btnAction').addEventListener('click', () => {
   if (app.state === STATES.IDLE || app.state === STATES.FINISHED) startMeasurement();
   else stopMeasurement();
 });
-$('historyHeader').addEventListener('click', function() {
+$('historyHeader').addEventListener('click', () => {
   app.showHistory = !app.showHistory;
   renderHistory();
 });
 
-document.addEventListener('visibilitychange', function() {
-  if (document.visibilityState === 'visible' &&
-      (app.state === STATES.ARMED || app.state === STATES.RUNNING)) {
+// re-acquire wake lock when page becomes visible (iOS releases it)
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && (app.state === STATES.ARMED || app.state === STATES.RUNNING)) {
     acquireWakeLock();
   }
 });
 
+// ---- Init ----
 loadHistory();
-$('versionInfo').textContent = VERSION + ' · ' + BUILD_DATE;
 render();
 </script>
 </body>
