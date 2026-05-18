@@ -150,7 +150,7 @@
 <script>
 'use strict';
 
-const VERSION = 'v0.6.0';
+const VERSION = 'v0.6.1';
 const BUILD_DATE = '2026-05-19';
 
 const STATES = {
@@ -217,26 +217,30 @@ function startMeasurement() {
   app.lastSample = null;
   render();
 
-  if (app.watchId !== null) navigator.geolocation.clearWatch(app.watchId);
-
-  app.watchId = navigator.geolocation.watchPosition(
-    function(pos) {
-      if (app.state === STATES.ARMING) {
-        setState(STATES.ARMED);
-      }
-      handlePosition(pos);
-    },
-    function(err) {
-      let msg = 'GPSエラー';
-      if (err.code === 1) msg = '位置情報のアクセスが拒否されました。';
-      else if (err.code === 2) msg = '現在位置を取得できません。屋外でお試しください。';
-      else if (err.code === 3) msg = 'GPS取得がタイムアウトしました。';
-      else msg = 'GPSエラー: ' + err.message;
-      showError(msg);
-      setState(STATES.IDLE);
-    },
-    { enableHighAccuracy: true, maximumAge: 0, timeout: 30000 }
-  );
+  // GPSが既に起動中ならそのまま使う(コールドスタート回避)
+  if (app.watchId === null) {
+    app.watchId = navigator.geolocation.watchPosition(
+      function(pos) {
+        if (app.state === STATES.ARMING) {
+          setState(STATES.ARMED);
+        }
+        handlePosition(pos);
+      },
+      function(err) {
+        let msg = 'GPSエラー';
+        if (err.code === 1) msg = '位置情報のアクセスが拒否されました。';
+        else if (err.code === 2) msg = '現在位置を取得できません。屋外でお試しください。';
+        else if (err.code === 3) msg = 'GPS取得がタイムアウトしました。';
+        else msg = 'GPSエラー: ' + err.message;
+        showError(msg);
+        setState(STATES.IDLE);
+      },
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 30000 }
+    );
+  } else {
+    // 既存のwatchを使う場合、すぐにARMEDへ遷移
+    setState(STATES.ARMED);
+  }
 
   acquireWakeLock();
 }
