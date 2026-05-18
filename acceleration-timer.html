@@ -28,6 +28,7 @@
   .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
   .title-small { font-family: "JetBrains Mono", monospace; font-size: 10px; letter-spacing: 0.3em; color: #6B7280; font-weight: 700; }
   .title { font-size: 22px; font-weight: 800; margin-top: 2px; letter-spacing: -0.02em; }
+  .version { font-family: "JetBrains Mono", monospace; font-size: 9px; color: #4B5563; letter-spacing: 0.1em; margin-top: 4px; font-weight: 600; }
   .gps-indicator { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #9CA3AF; font-family: "JetBrains Mono", monospace; margin-top: 6px; }
   .gps-dot { width: 6px; height: 6px; border-radius: 50%; background: #6B7280; box-shadow: 0 0 6px #6B7280; transition: all 0.3s; }
 
@@ -104,6 +105,7 @@
     <div>
       <div class="title-small">0 → 100 KM/H</div>
       <div class="title">加速タイマー</div>
+      <div class="version" id="versionInfo"></div>
     </div>
     <div class="gps-indicator">
       <div class="gps-dot" id="gpsDot"></div>
@@ -155,6 +157,9 @@
 
 <script>
 'use strict';
+
+const VERSION = 'v0.3.1';
+const BUILD_DATE = '2026-05-19';
 
 const STATES = {
   IDLE: 'idle',
@@ -538,6 +543,7 @@ document.addEventListener('visibilitychange', function() {
 });
 
 loadHistory();
+$('versionInfo').textContent = VERSION + ' · ' + BUILD_DATE;
 render();
 </script>
 </body>
