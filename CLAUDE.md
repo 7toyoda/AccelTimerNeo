@@ -18,7 +18,7 @@ Draggy に匹敵する精度（±0.05〜0.1 秒）を目標とするネイティ
 # CLIビルド（シミュレーター）
 xcodebuild -project AccelTimer.xcodeproj \
            -scheme AccelTimer \
-           -destination 'platform=iOS Simulator,name=iPhone 16 Pro Max' \
+           -destination 'platform=iOS Simulator,name=iPhone 17 Pro Max' \
            build
 
 # CLIビルド（実機・要 -allowProvisioningUpdates）
@@ -28,14 +28,16 @@ xcodebuild -project AccelTimer.xcodeproj \
            -allowProvisioningUpdates \
            build
 
-# テスト実行
+# テスト実行（テストは AccelTimer スキームの TestAction に含まれる）
 xcodebuild -project AccelTimer.xcodeproj \
-           -scheme AccelTimerTests \
-           -destination 'platform=iOS Simulator,name=iPhone 16 Pro Max' \
+           -scheme AccelTimer \
+           -destination 'platform=iOS Simulator,name=iPhone 17 Pro Max' \
            test
 
 # 単一テストクラス
-xcodebuild test -only-testing:AccelTimerTests/<TestClassName>
+xcodebuild -project AccelTimer.xcodeproj -scheme AccelTimer \
+           -destination 'platform=iOS Simulator,name=iPhone 17 Pro Max' \
+           test -only-testing:AccelTimerTests/<TestClassName>
 
 # SwiftLint（導入済みの場合）
 swiftlint lint --strict

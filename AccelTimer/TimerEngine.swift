@@ -175,9 +175,22 @@ final class TimerEngine {
         kalman.speedMs * 3.6
     }
 
-    private static let splitThresholdsMs: [Double] = [
+    static let splitThresholdsMs: [Double] = [
         40 / 3.6, 60 / 3.6, 80 / 3.6, 100 / 3.6
     ]
+
+    /// 速度しきい値クロス時刻を線形補間で算出する純粋関数（テスト対象）。
+    /// `prev.speed < threshold <= curr.speed` を満たす連続2サンプル間で、
+    /// しきい値に到達した時刻を線形補間し、ミリ秒精度のクロス時刻を返す。
+    /// センサー由来の状態に依存しないため `nonisolated`。
+    nonisolated static func interpolatedCrossTime(
+        threshold: Double,
+        prev: (speed: Double, time: Date),
+        curr: (speed: Double, time: Date)
+    ) -> Date {
+        let frac = (threshold - prev.speed) / (curr.speed - prev.speed)
+        return prev.time.addingTimeInterval(frac * curr.time.timeIntervalSince(prev.time))
+    }
 
     init() {
         location.onSpeedUpdate = { [weak self] speedMs, timestamp, speedAccuracy in
@@ -755,9 +768,10 @@ final class TimerEngine {
                   prevSpeed < threshold,
                   currSpeed >= threshold else { continue }
 
-            let frac = (threshold - prevSpeed) / (currSpeed - prevSpeed)
-            let crossTime = prevTime.addingTimeInterval(
-                frac * currTime.timeIntervalSince(prevTime)
+            let crossTime = Self.interpolatedCrossTime(
+                threshold: threshold,
+                prev: (prevSpeed, prevTime),
+                curr: (currSpeed, currTime)
             )
             // 補間結果がstartTimeより前になった場合（センサーのタイミングずれ）はスキップ
             guard crossTime >= start else { continue }

@@ -8,6 +8,7 @@
 
 /* Begin PBXFileReference section */
 		594BB0012FC162D00009A57F /* AccelTimer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AccelTimer.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		AC7E000000000000000000A2 /* AccelTimerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AccelTimerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -29,10 +30,22 @@
 			path = AccelTimer;
 			sourceTree = "<group>";
 		};
+		AC7E000000000000000000A6 /* AccelTimerTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = AccelTimerTests;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		594BAFFE2FC162D00009A57F /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AC7E000000000000000000A4 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -46,6 +59,7 @@
 			isa = PBXGroup;
 			children = (
 				594BB0032FC162D00009A57F /* AccelTimer */,
+				AC7E000000000000000000A6 /* AccelTimerTests */,
 				594BB0022FC162D00009A57F /* Products */,
 			);
 			sourceTree = "<group>";
@@ -54,6 +68,7 @@
 			isa = PBXGroup;
 			children = (
 				594BB0012FC162D00009A57F /* AccelTimer.app */,
+				AC7E000000000000000000A2 /* AccelTimerTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -83,6 +98,29 @@
 			productReference = 594BB0012FC162D00009A57F /* AccelTimer.app */;
 			productType = "com.apple.product-type.application";
 		};
+		AC7E000000000000000000A1 /* AccelTimerTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AC7E000000000000000000A7 /* Build configuration list for PBXNativeTarget "AccelTimerTests" */;
+			buildPhases = (
+				AC7E000000000000000000A3 /* Sources */,
+				AC7E000000000000000000A4 /* Frameworks */,
+				AC7E000000000000000000A5 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				AC7E000000000000000000B1 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				AC7E000000000000000000A6 /* AccelTimerTests */,
+			);
+			name = AccelTimerTests;
+			packageProductDependencies = (
+			);
+			productName = AccelTimerTests;
+			productReference = AC7E000000000000000000A2 /* AccelTimerTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -95,6 +133,10 @@
 				TargetAttributes = {
 					594BB0002FC162D00009A57F = {
 						CreatedOnToolsVersion = 26.5;
+					};
+					AC7E000000000000000000A1 = {
+						CreatedOnToolsVersion = 26.5;
+						TestTargetID = 594BB0002FC162D00009A57F;
 					};
 				};
 			};
@@ -116,12 +158,20 @@
 			projectRoot = "";
 			targets = (
 				594BB0002FC162D00009A57F /* AccelTimer */,
+				AC7E000000000000000000A1 /* AccelTimerTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		594BAFFF2FC162D00009A57F /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AC7E000000000000000000A5 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -138,7 +188,32 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		AC7E000000000000000000A3 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXContainerItemProxy section */
+		AC7E000000000000000000B2 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 594BAFF92FC162D00009A57F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 594BB0002FC162D00009A57F;
+			remoteInfo = AccelTimer;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXTargetDependency section */
+		AC7E000000000000000000B1 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 594BB0002FC162D00009A57F /* AccelTimer */;
+			targetProxy = AC7E000000000000000000B2 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		594BB00C2FC162D20009A57F /* Debug */ = {
@@ -332,6 +407,44 @@
 			};
 			name = Release;
 		};
+		AC7E000000000000000000A8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = L997D8UHF6;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 0.1.21;
+				PRODUCT_BUNDLE_IDENTIFIER = com.acceltimer.app.AccelTimerTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/AccelTimer.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/AccelTimer";
+			};
+			name = Debug;
+		};
+		AC7E000000000000000000A9 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = L997D8UHF6;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 0.1.21;
+				PRODUCT_BUNDLE_IDENTIFIER = com.acceltimer.app.AccelTimerTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/AccelTimer.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/AccelTimer";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -349,6 +462,15 @@
 			buildConfigurations = (
 				594BB00F2FC162D20009A57F /* Debug */,
 				594BB0102FC162D20009A57F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AC7E000000000000000000A7 /* Build configuration list for PBXNativeTarget "AccelTimerTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AC7E000000000000000000A8 /* Debug */,
+				AC7E000000000000000000A9 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
