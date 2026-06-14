@@ -1,0 +1,28 @@
+# macOS
+.DS_Store
+
+# Xcode - build / user-specific
+build/
+DerivedData/
+*.xcuserstate
+**/xcuserdata/
+**/*.xcuserdatad/
+
+# Xcode - misc
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Swift Package Manager
+.swiftpm/
+.build/
+Packages/
+
+# CocoaPods / Carthage (未使用だが将来用)
+Pods/
+Carthage/Build/
+
+# Claude Code - マシン固有のローカル設定
+.claude/settings.local.json
