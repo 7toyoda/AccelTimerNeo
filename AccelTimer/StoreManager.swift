@@ -1,31 +1,34 @@
 import Foundation
 import StoreKit
 
-/// 無料計測枠（Keychain 永続）と買い切り解放（StoreKit 2 非消費型 IAP）を管理する。
-/// `isUnlocked` が false の間は新規計測をブロックし、ペイウォールを表示する。
+/// 買い切り解放（StoreKit 2 非消費型 IAP）を管理する。
+/// 計測自体は常に無料・無制限。無料ユーザーは履歴を `freeHistoryLimit` 件まで保存でき、
+/// それを超える保存はブロックしてペイウォールを表示する（ハイブリッド課金モデル）。
 @Observable
 @MainActor
 final class StoreManager {
-    /// 無料で計測できる回数（完走＝100km/h到達のみカウント）。これを超えると買い切りが必要。
-    /// ※ 検証中は 1000。リリース時は 20 等に戻すこと。
-    static let freeMeasurementLimit = 1000
+    /// 無料で保存できる履歴件数。これを超えて保存しようとすると買い切りが必要。
+    static let freeHistoryLimit = 5
     /// App Store Connect で登録する非消費型プロダクト ID。
     static let unlockProductID = "com.acceltimer.app.AccelTimer.unlock"
 
     private(set) var isPurchased = false
-    private(set) var freeUsed: Int
     private(set) var product: Product?
     private(set) var purchaseInFlight = false
 
-    /// 計測可能か（購入済み、または無料枠が残っている）。
-    var isUnlocked: Bool { isPurchased || freeUsed < Self.freeMeasurementLimit }
-    /// 残りの無料計測回数。
-    var freeRemaining: Int { max(0, Self.freeMeasurementLimit - freeUsed) }
     /// 表示用の価格文字列（未ロード時は nil）。
     var displayPrice: String? { product?.displayPrice }
 
+    /// 現在の保存件数で、もう1件保存できるか（購入済みなら常に true）。
+    func canSaveAnother(currentCount: Int) -> Bool {
+        isPurchased || currentCount < Self.freeHistoryLimit
+    }
+    /// 無料で残り保存できる件数。
+    func freeSlotsRemaining(currentCount: Int) -> Int {
+        max(0, Self.freeHistoryLimit - currentCount)
+    }
+
     init() {
-        freeUsed = TrialKeychain.measurementCount
         // App Store 外（他デバイスでの購入・返金など）からのトランザクション更新を監視
         Task { [weak self] in
             for await update in Transaction.updates {
@@ -80,12 +83,5 @@ final class StoreManager {
     func restore() async {
         try? await AppStore.sync()
         await refreshEntitlement()
-    }
-
-    /// 計測が保存されたら呼ぶ。未購入時のみ無料カウントを Keychain に加算する。
-    func registerMeasurement() {
-        guard !isPurchased else { return }
-        TrialKeychain.measurementCount += 1
-        freeUsed = TrialKeychain.measurementCount
     }
 }

@@ -1,7 +1,9 @@
 import SwiftUI
+import SwiftData
 import AVFoundation
 
 struct SettingsView: View {
+    @Query private var records: [MeasurementRecord]
     @AppStorage("autoResetAfterFinish") private var autoReset: Bool = true
     @AppStorage("speakEnabled") private var speakEnabled: Bool = true
     @AppStorage("videoRecordingEnabled") private var videoEnabled: Bool = false
@@ -25,16 +27,19 @@ struct SettingsView: View {
                                 .foregroundStyle(.green)
                         } else {
                             HStack {
-                                Text("無料計測の残り")
+                                Text("無料保存の残り")
                                 Spacer()
-                                Text("\(store.freeRemaining) / \(StoreManager.freeMeasurementLimit) 回")
+                                Text("\(store.freeSlotsRemaining(currentCount: records.count)) / \(StoreManager.freeHistoryLimit) 件")
                                     .foregroundStyle(.secondary)
                             }
+                            Text("計測は無料・無制限。履歴の保存は\(StoreManager.freeHistoryLimit)件まで無料です。")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
                             // 無料枠が残っていても、いつでも購入して全機能を解放できる
                             Button {
                                 showPaywall = true
                             } label: {
-                                Label("全機能を解放（購入）", systemImage: "lock.open.fill")
+                                Label("履歴を無制限に解放（購入）", systemImage: "lock.open.fill")
                                     .foregroundStyle(.orange)
                             }
                             Button {

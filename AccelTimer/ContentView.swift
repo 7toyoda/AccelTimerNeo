@@ -84,8 +84,37 @@ struct MeasureView: View {
     @State private var videoErrorMessage: String? = nil
     @State private var pendingVideoFileName: String? = nil
     @State private var backgroundAbortToast = false
+    // 無料の保存上限に達したペイウォールを一度提示したら、空きができるまで連発しない
+    @State private var freeLimitNoticeShown = false
 
     private static let splitLabels = ["0→40", "0→60", "0→80", "0→100"]
+
+    /// 完了/中断後の保存を試みる。無料の保存上限なら保存せず待機へ戻し、解放を促す。
+    /// 計測自体は無料なので、保存できなくても arm() で次の計測へ進める。
+    private func attemptSaveAndArm() {
+        if store.canSaveAnother(currentCount: records.count) {
+            engine.saveAndArm(context: modelContext)
+        } else {
+            engine.arm()
+            presentFreeLimitPaywall()
+        }
+    }
+
+    /// autoReset=OFF 完了時の保存を試みる。上限なら保存せず結果表示を維持し、解放を促す。
+    private func attemptSaveResult() {
+        if store.canSaveAnother(currentCount: records.count) {
+            engine.saveResult(context: modelContext)
+        } else {
+            presentFreeLimitPaywall()
+        }
+    }
+
+    /// 無料の保存上限ペイウォールを提示（同一上限セッション中は1回だけ）。
+    private func presentFreeLimitPaywall() {
+        guard !freeLimitNoticeShown else { return }
+        freeLimitNoticeShown = true
+        showPaywall = true
+    }
 
     // 各速度帯のベストタイム
     private var best40:  Double? { records.compactMap { $0.split40  > 0 ? $0.split40  : nil }.min() }
@@ -173,10 +202,6 @@ struct MeasureView: View {
                     videoErrorMessage = nil
                 }
             }
-            // 無料枠を使い切り＆未購入：計測画面をロックして解放ボタンを表示
-            if !store.isUnlocked && !showPaywall {
-                lockedOverlay
-            }
             // 位置情報が拒否/制限されている：計測不可のためガイドを最前面に表示
             if engine.locationDenied {
                 locationDeniedOverlay
@@ -189,14 +214,14 @@ struct MeasureView: View {
         .onChange(of: engine.autoResetRequested) { _, requested in
             guard requested else { return }
             if autoReset || engine.state != .finished {
-                engine.saveAndArm(context: modelContext)
+                attemptSaveAndArm()
                 // saveAndArm → arm() → state=.armed の onChange で録画停止される
             } else {
                 // autoReset=OFF かつ finished: state が .armed にならないためここで停止
                 recordingStopTask?.cancel()
                 recordingStopTask = nil
                 stopVideoRecordingIfNeeded()
-                engine.saveResult(context: modelContext)
+                attemptSaveResult()
             }
         }
         .onChange(of: engine.state) { oldState, state in handleStateChange(oldState, state) }
@@ -206,7 +231,7 @@ struct MeasureView: View {
                 if engine.isResultSaved {
                     engine.arm()
                 } else if engine.autoResetRequested {
-                    engine.saveAndArm(context: modelContext)
+                    attemptSaveAndArm()
                 }
             }
         }
@@ -214,13 +239,8 @@ struct MeasureView: View {
             isVisible = true
             UIApplication.shared.isIdleTimerDisabled = true
             engine.bestTimes = bests
-            engine.onMeasurementSaved = { store.registerMeasurement() }
-            if !store.isUnlocked {
-                // 無料枠を使い切っている → 計測を開始せずペイウォール表示
-                engine.cancel()
-                showPaywall = true
-            } else if engine.state == .idle {
-                // オンボーディング完了後のみ arm（未完了なら許可ダイアログを出さず保留）
+            // 計測は常に無料・無制限。idle なら待機開始（オンボーディング完了後のみ）。
+            if engine.state == .idle {
                 if onboardingDone { engine.arm() }
             } else {
                 engine.resumeSensors()               // .armed: GPS+Motion再開
@@ -239,6 +259,8 @@ struct MeasureView: View {
         }
         .onChange(of: records) { _, _ in
             engine.bestTimes = bests
+            // 履歴削除などで空きができたら、上限ペイウォールの再提示を許可する
+            if store.canSaveAnother(currentCount: records.count) { freeLimitNoticeShown = false }
             applyPendingVideoFileName()
             // 新規保存レコードの国コードを後追い付与（将来の国別ランキング用）
             Task { await CountryGeocoder.shared.backfill(records: records) }
@@ -260,21 +282,13 @@ struct MeasureView: View {
 
     var body: some View {
         measureStage1
-        // 無料枠を使い切った瞬間に計測を止めてペイウォールを表示（最後の保存直後など）。
-        // 逆に解放された（購入・起動時の権利確認完了）瞬間はペイウォールを閉じる。
-        .onChange(of: store.isUnlocked) { _, unlocked in
-            if !unlocked {
-                engine.cancel()
-                showPaywall = true
-            } else {
-                showPaywall = false
-                // 解放された（購入/権利確認完了）→ idle で固まらないよう待機を再開
-                if engine.state == .idle && onboardingDone { engine.arm() }
-            }
+        // 購入完了（または起動時の権利確認）でペイウォールを閉じる。
+        .onChange(of: store.isPurchased) { _, purchased in
+            if purchased { showPaywall = false; freeLimitNoticeShown = false }
         }
         // 事前アナウンス完了（許可ダイアログ後）→ idle なら待機開始。免責→アナウンス後にarmが初めて走る
         .onChange(of: hasSeenLocationPrimer) { _, seen in
-            if seen, store.isUnlocked, engine.state == .idle { engine.arm() }
+            if seen, engine.state == .idle { engine.arm() }
         }
         .sheet(isPresented: $showPaywall) {
             PaywallView(store: store) { showPaywall = false }
@@ -616,31 +630,9 @@ struct MeasureView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     BigButton(label: "再計測", color: .blue) {
-                        if store.isUnlocked { engine.arm() } else { showPaywall = true }
+                        engine.arm()
                     }
                 }
-            }
-        }
-    }
-
-    private var lockedOverlay: some View {
-        ZStack {
-            Color.black.opacity(0.92).ignoresSafeArea()
-            VStack(spacing: 16) {
-                Image(systemName: "lock.fill")
-                    .font(.system(size: 44))
-                    .foregroundStyle(.yellow)
-                Text("無料計測を使い切りました")
-                    .font(.system(size: 22, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white)
-                Text("買い切りで全機能を解放できます")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                BigButton(label: "解放する", color: .blue) {
-                    showPaywall = true
-                }
-                .padding(.horizontal, 40)
-                .padding(.top, 8)
             }
         }
     }
@@ -720,7 +712,7 @@ struct MeasureView: View {
 
     /// 状態遷移に伴う動画録画ライフサイクル（プリロール/ロック/トリミング保存/破棄）。
     private func handleStateChange(_ oldState: MeasurementState, _ state: MeasurementState) {
-        if state == .idle && store.isUnlocked { engine.arm() }
+        if state == .idle { engine.arm() }
         guard videoEnabled else { return }
         switch state {
         case .running:
@@ -783,10 +775,7 @@ struct MeasureView: View {
             videoSessionReady = false
         case .active:
             UIApplication.shared.isIdleTimerDisabled = true
-            if !store.isUnlocked {
-                engine.cancel()
-                showPaywall = true
-            } else if engine.state == .idle {
+            if engine.state == .idle {
                 if onboardingDone { engine.arm() }
             } else {
                 engine.resumeSensors()

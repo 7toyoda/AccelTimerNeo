@@ -13,9 +13,9 @@ struct PaywallView: View {
     @State private var edgeAngle: Double = 0
 
     private static let features: [(String, LocalizedStringKey)] = [
-        ("infinity",            "計測が無制限"),
-        ("video.fill",          "走行動画オーバーレイ録画"),
-        ("chart.xyaxis.line",   "履歴・スプリット詳細・速度グラフ")
+        ("infinity",            "履歴を無制限に保存"),
+        ("video.fill",          "走行動画も無制限に保存"),
+        ("chart.xyaxis.line",   "全記録のスプリット・グラフ・地図を保持")
     ]
 
     var body: some View {

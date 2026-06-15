@@ -38,8 +38,6 @@ final class TimerEngine {
     var bestTimes: [Double?] = [nil, nil, nil, nil]
     /// バックグラウンド移行による計測中止フラグ（復帰時にトーストで通知）
     private(set) var backgroundAbortedRun: Bool = false
-    /// 計測レコードが実際に保存されたときに呼ばれる（無料枠カウント用）
-    var onMeasurementSaved: (() -> Void)?
 
     // MARK: - Internal
     private let location = LocationManager()
@@ -956,8 +954,6 @@ final class TimerEngine {
         record.logFileName = logger.writeCSV(recordDate: now) ?? ""
         context.insert(record)
         trimHistory(context: context)
-        // 完走（100km/h到達）した計測だけ無料枠カウントへ通知。未達は消費しない。
-        if isComplete { onMeasurementSaved?() }
     }
 
     private func trimHistory(context: ModelContext) {
