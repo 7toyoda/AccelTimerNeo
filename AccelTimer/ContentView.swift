@@ -73,6 +73,9 @@ struct MeasureView: View {
     @State private var runningPulse: Bool = false
     @State private var runningGlow: Bool = false
     @State private var edgeAngle: Double = 0
+    // 計測せずに演出（エッジグロー＋集中線）を一時的に確認するためのプレビュー
+    @State private var previewVisuals: Bool = false
+    @State private var previewTask: Task<Void, Never>? = nil
     @State private var recorder = VideoRecorder()
     @State private var isVideoRecording = false
     @State private var overlayTimer: Timer? = nil   // 録画中のみ動くオーバーレイ更新タイマー(30Hz)
@@ -97,6 +100,11 @@ struct MeasureView: View {
     private var measureContent: some View {
         ZStack {
             Color.black.ignoresSafeArea()
+                // 計測中以外に背景を長押しすると演出を一時プレビュー（8秒・再長押しで解除）
+                .onLongPressGesture(minimumDuration: 0.6) {
+                    guard !isRunning else { return }
+                    toggleVisualsPreview()
+                }
             if showRunningVisuals {
                 runningEdgeGlow
                 SpeedLinesView()
@@ -300,6 +308,8 @@ struct MeasureView: View {
         .onChange(of: scenePhase) { _, phase in handleScenePhase(phase) }
         .onDisappear {
             isVisible = false
+            previewTask?.cancel()
+            previewVisuals = false
             stopOverlayTimer()
             UIApplication.shared.isIdleTimerDisabled = false
             engine.pauseSensors()  // ARMED のときのみ停止
@@ -417,7 +427,22 @@ struct MeasureView: View {
     // 画面が縦に短い端末（iPhone SE等, 4.7インチ=667pt）か。要素を小さくして上下の余白を確保する。
     private var isShortScreen: Bool { UIScreen.main.bounds.height < 700 }
     // 計測中の演出を出すか
-    private var showRunningVisuals: Bool { isRunning }
+    private var showRunningVisuals: Bool { isRunning || previewVisuals }
+
+    /// 計測せずに演出を一定時間プレビューする（長押しで起動）。再長押し/タップで延長・解除。
+    private func toggleVisualsPreview() {
+        previewTask?.cancel()
+        if previewVisuals {
+            withAnimation { previewVisuals = false }
+            return
+        }
+        withAnimation { previewVisuals = true }
+        previewTask = Task { @MainActor in
+            try? await Task.sleep(for: .seconds(8))
+            guard !Task.isCancelled else { return }
+            withAnimation { previewVisuals = false }
+        }
+    }
 
     // 速度表示文字列。GPS確認中(赤)で待機中は「速度不明」を表す "-.-"（0.0=停車中と区別）。
     // 画面表示は ~10Hz に間引いた displaySpeedKmh を使う（fusedSpeedKmh=100Hzは動画オーバーレイ用）。
@@ -429,27 +454,21 @@ struct MeasureView: View {
     }
 
     // 計測中だけ表示する、画面の淵を流れるエッジグロー。
-    // 外周＝原色（フル彩度の虹）、内側へ向かって白くフェード。中央は見やすく保つ。
+    // 外周＝原色（フル彩度の虹）のみ。中央は見やすく保つ。
     private var runningEdgeGlow: some View {
         // フル彩度＝原色の虹（端で 0 と 1.0 が一致しループが繋がる）
         let hues = stride(from: 0.0, through: 1.0, by: 1.0 / 12.0)
             .map { Color(hue: $0, saturation: 1.0, brightness: 1.0) }
-        // 描画負荷軽減のため2層に（全画面ブラーは高負荷なので層数・半径を抑える）。
+        // 描画負荷軽減のため単層（全画面ブラーは高負荷なので層数・半径を抑える）。
         // 画面の角が丸いため、角ばったRectangleだと四隅でグローがはみ出して細く見える。
         // 画面の丸みに合わせたRoundedRectangleにして四辺・四隅で同じ幅にする。
         return ZStack {
-            // 外周：原色（くっきり）。内側へ向かう白みも、外周ストロークと白ストロークの重ねで表現
+            // 外周：原色（くっきり）のみ。内側の白みは廃止。
             RoundedRectangle(cornerRadius: 55, style: .continuous)
                 .stroke(AngularGradient(gradient: Gradient(colors: hues),
                                         center: .center, angle: .degrees(edgeAngle)),
                         lineWidth: 34)
                 .blur(radius: 12)
-                .blendMode(.plusLighter)
-            // 内側：白み（内側へオフセット＝内へ行くほど白く）
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .stroke(Color.white, lineWidth: 22)
-                .blur(radius: 26)
-                .padding(34)
                 .blendMode(.plusLighter)
         }
         .ignoresSafeArea()
