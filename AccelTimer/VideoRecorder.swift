@@ -124,7 +124,8 @@ final class VideoRecorder: NSObject {
         }
 
         sess.commitConfiguration()
-        sess.startRunning()
+        // 省電力：ビルド時はセッションを起動しない。停車確認後のプリロール開始
+        // （startRecording）で初めて起動し、録画の保存/破棄で停止する。
         captureSession = sess
         videoOutput = out
         DispatchQueue.main.async { [weak self] in self?.onReady?() }
@@ -136,6 +137,15 @@ final class VideoRecorder: NSObject {
             queue: nil
         ) { [weak self] _ in
             self?.stopAndSave()
+        }
+    }
+
+    /// 省電力：録画終了後にキャプチャセッションを停止する（次のプリロールで再起動）。
+    /// teardown と異なりセッション構成は保持するため、再起動のコストが小さい。
+    private func pauseSessionRunning() {
+        sessionQ.async { [weak self] in
+            guard let s = self?.captureSession, s.isRunning else { return }
+            s.stopRunning()
         }
     }
 
@@ -167,6 +177,8 @@ final class VideoRecorder: NSObject {
         // 先にtrueにするとframeQが回転前（未補正サイズ）のフレームをライターに送り込み映像が壊れる。
         sessionQ.async { [weak self] in
             guard let self else { return }
+            // 省電力：プリロール開始時にキャプチャセッションを起動（待機中は止めてある）
+            if let s = self.captureSession, !s.isRunning { s.startRunning() }
             if let conn = self.videoOutput?.connection(with: .video),
                conn.isVideoRotationAngleSupported(rotationAngle) {
                 conn.videoRotationAngle = rotationAngle
@@ -246,6 +258,7 @@ final class VideoRecorder: NSObject {
 
     func stopAndSave() {
         wantsRecording = false
+        pauseSessionRunning()
         frameQ.async { [weak self] in
             guard let self else { return }
             guard self.recordingActive else {
@@ -275,6 +288,7 @@ final class VideoRecorder: NSObject {
 
     func cancelAndDiscard() {
         wantsRecording = false
+        pauseSessionRunning()
         frameQ.async { [weak self] in
             guard let self else { return }
             if self.recordingActive {
@@ -299,6 +313,7 @@ final class VideoRecorder: NSObject {
     /// launchWall が nil（発進時刻不明）の場合は全体を保存する。一時ファイルは保存後に削除。
     func stopAndSaveTrimmed(launchWall: Date?, leadIn: Double) {
         wantsRecording = false
+        pauseSessionRunning()
         frameQ.async { [weak self] in
             guard let self else { return }
             guard self.recordingActive else {
