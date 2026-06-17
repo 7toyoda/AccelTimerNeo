@@ -122,12 +122,13 @@ final class TimerEngine {
     private static let decelAbortMinPeakKmh = 20.0
     // 減速リセット機能の有効/無効。一旦廃止（false）。再有効化はここを true にするだけ。
     private static let decelAbortEnabled = false
-    // 偽発進フェイルセーフ：発進検知後この秒数を超えてもピークがこの速度未満で、かつ現在ほぼ停止している
-    // 場合に誤トリガー/微速クリープとみなし破棄する。「現在ほぼ停止」を条件に加えることで、
-    // 遅い車両がゆっくり加速中（peakがまだ低いが前進している）の本物の計測は絶対に中断しない。
-    private static let falseLaunchTimeoutSec  = 5.0
-    private static let falseLaunchPeakKmh     = 20.0
-    private static let falseLaunchCurrentKmh  = 8.0
+    // 偽発進フェイルセーフ（微速クリープ対策）：発進検知から launchConfirmSec 秒たっても
+    // ピーク速度が launchConfirmKmh に届かなければ、本物のフル加速ではなく信号待ちの微速前進
+    // （クリープ）や誤トリガーとみなし、計測を破棄して ARMED へ戻す。
+    // 本物の 0-100 発進は数秒で 25km/h を余裕で超える（ゆっくりな車でも 5 秒あれば届く）ため、
+    // 実走の加速は中断しない。現在速度は条件にしない＝低速のまま進み続けるクリープも確実に弾く。
+    private static let launchConfirmSec = 5.0
+    private static let launchConfirmKmh = 25.0
 
     // 計測中の最良 GPS 精度（値が小さいほど良い）
     private var bestGPSAccuracy: Double = -1
@@ -498,14 +499,12 @@ final class TimerEngine {
             if speedKmh < 5.0 && !autoResetRequested && peakSpeedKmh >= 5.0 {
                 autoResetRequested = true
             }
-            // 偽発進フェイルセーフ：発進検知から一定時間たってもピークが低く(peak<20)、かつ現在ほぼ停止
-            // (現在速度<8)＝誤トリガーや微速クリープで止まった状態。停車検知(peak>=5要求)では救えず
-            // 「0km/hで計測中」が続くため破棄してARMEDへ戻す。
-            // 現在速度の条件により、ゆっくり前進加速中の本物の計測は中断しない。
+            // 偽発進フェイルセーフ（微速クリープ対策）：start から launchConfirmSec 秒以内に
+            // ピークが launchConfirmKmh に届かない＝信号待ちの微速前進等で誤トリガーした計測。
+            // クリープは止まらず低速のまま進むこともあるため、現在速度は条件にしない。
             if state == .running, let start = startTime,
-               timestamp.timeIntervalSince(start) > Self.falseLaunchTimeoutSec,
-               peakSpeedKmh < Self.falseLaunchPeakKmh,
-               speedKmh < Self.falseLaunchCurrentKmh {
+               timestamp.timeIntervalSince(start) > Self.launchConfirmSec,
+               peakSpeedKmh < Self.launchConfirmKmh {
                 abortRunDueToFalseLaunch()
                 return
             }
