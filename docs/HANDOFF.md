@@ -86,6 +86,12 @@
 - 買い切り（非消費型 IAP `com.acceltimer.app.AccelTimer.unlock`、¥800、StoreKit2）。
   ローカルテストは `AccelTimer.storekit` をスキームが参照。
 - `TrialKeychain.swift` は現在未使用（将来の不正防止用に残置）。
+- **不変条件: 動画はレコードと対でのみ保存する**（v0.1.31）。保存上限でレコードを
+  残さない時は動画も `discardCurrentVideo()` で破棄すること。さもないと動画だけ
+  保存されて孤立し、`applyPendingVideoFileName` が別計測へ誤ひも付けする。保存経路
+  （attemptSaveAndArm/attemptSaveResult/10秒保険/onDisappear(finished)）はこの規則を守る。
+  なお `handleStateChange(.armed)` の動画保存は record 保存後に走るため `records.count`
+  での上限判定は入れない（更新タイミング差で正しい計測の動画を誤破棄するため）。
 
 ## 8. 省電力
 
