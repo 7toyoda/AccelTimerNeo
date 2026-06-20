@@ -1,0 +1,142 @@
+# HANDOFF — AccelTimer 設計判断・経緯・現状
+
+このドキュメントは、これまでの開発で蓄積した「なぜそうなっているか」をまとめた
+引き継ぎ資料。コードのコメントや CLAUDE.md / AGENTS.md に書かれていない背景を含む。
+**変更前に該当箇所を読み、ここに書かれた意図的な設計を壊さないこと。** 記述と実
+コードが食い違う場合は実コードを正とし、本書を更新すること。
+
+最終更新時の状態: バージョン 0.1.30 系 / Swift 6 / SwiftUI / SwiftData / iOS 17+。
+リポジトリ: GitHub `toy0da/accel-timer`（main ブランチ運用）。
+
+---
+
+## 1. 状態機械と中核
+
+`IDLE → ARMED → RUNNING → FINISHED`（`TimerEngine.MeasurementState`）。
+`TimerEngine`（`@Observable @MainActor`）がセンサー制御・速度計算・状態遷移の核心。
+
+- GPS（CoreLocation Doppler, 実機では概ね **1Hz**）＝速度の絶対基準。
+- CoreMotion（CMDeviceMotion, **100Hz**）＝GPS 間の補間・発進検出用リングバッファ。
+- スプリット時刻（0→40/60/80/100 km/h）は **線形補間**でミリ秒精度算出。純粋関数
+  `TimerEngine.interpolatedCrossTime` に抽出済み（`AccelTimerTests` でテスト）。
+- GPS 精度判定は **Doppler 速度精度 `speedAccuracy`(m/s)**。青<0.3 / 緑<1.0 /
+  黄<2.0 / 赤≥2.0。赤＝UI「GPS確認中」。hAcc が良くても sAcc が悪い場合があるため
+  速度精度を採用。
+
+## 2. 発進検出（lookback と微速クリープ対策）
+
+- 発進トリガー条件: `confirmedStoppedWhileArmed && speedMs > launchThreshold &&
+  speedAccuracy < 2.0`。`launchThreshold = min(10, max(5, sAcc×2)) km/h`。
+  **停車確認（GPS良好で速度≈0）が前提**。これは正常に効いている（実ログ全発進で成立）。
+- t=0 は `lookBackStartTime` でリングバッファの静止→加速の立ち上がり点へ遡って
+  アンカー（高精度）。静止区間が無い（GPS遅延）場合は加速度から速度0時刻へ
+  バックエクストラポレーション。
+- **微速クリープ誤発進対策（v0.1.28）**: 信号待ちの徐行（6.8km/h 等）でトリガーが
+  誤発火し、徐行を含む水増し計測が完走記録される問題があった。**トリガー時の加速度
+  では判別不可**（lookback が t=0 を加速前に固定するため、クリーン発進の直後加速度が
+  クリープより低くなる実測あり）。判別軸は「**発進後に速度が伸びるか**」。
+  フェイルセーフ: `start` から `launchConfirmSec`(5s) 以内にピークが `launchConfirmKmh`
+  (25km/h) 未満なら `abortRunDueToFalseLaunch()` で破棄。実走は5秒で余裕で25km/h超、
+  クリープは届かない。破棄後は車が動き続けるので（confirmedStopped が false のまま）
+  再停車まで再トリガーせず、ロールング発進も防ぐ。
+
+## 3. 減速リセットは「意図的に無効」（重要・触らない）
+
+`TimerEngine.decelAbortEnabled = false`。RUNNING 中にピークから大きく減速したら破棄
+する「減速リセット」は実装済みだが、ユーザーが「減速すると『停車してください』が
+出て計測が中断されるのが嫌」と判断し **意図的に無効化**している。
+- 副作用として、巡航/失速を挟んで 100km/h に達した計測の 0-100 が水増し（例 19.6 秒）
+  になり得るが、ユーザーは現状これを許容している。
+- 代替案（保存時に経過時間で参考値/自動除外する事後判定）は未実装・保留。勝手に
+  有効化しないこと。
+
+## 4. FINISHED 表示（区間線形補間）
+
+100km/h 通過〜ピーク〜減速の表示は試行錯誤の末 **GPS到着ごとの区間線形補間**に
+落ち着いた（デッドレコニング/α-β はピークでオーバーシュートしたため）。`finishSeg*`
+変数群。100Hz モーションで区間内を lerp。完了後の停車確定でモーション停止（省電力）。
+
+## 5. READY 整合・録画整合（v0.1.29〜0.1.30）
+
+- **READY 表示 ＝ 停車確認 ＋ GPS良好**。以前は端末固定(deviceSteady)も要求していた
+  が、発進トリガー・録画は端末固定を要求しない（手持ち計測を許可し参考値扱いする
+  設計）ため不整合だった。READY を実態に合わせ、端末固定の案内はサブ文言に降格。
+  → 「READY が出ている時だけ計測/録画が動く」状態。**deviceSteady をトリガー必須
+  条件にしない**のが意図（固定必須＝B案は不採用）。
+- **録画（プリロール）も同条件**: `startPrerollIfNeeded` のガードに `!gpsIsRed` を追加し、
+  GPS確認中(赤)では録画しない。待機中に赤へ落ちたら録画停止、回復で再開、RUNNING中は
+  止めない（`onChange(gpsIsRed)`）。
+
+## 6. 参考値・手持ち検知
+
+- 到達付近(80km/h超)の平均速度精度が緑未満、または発進時に端末が不安定だった場合、
+  `MeasurementRecord.isReferenceOnly`（`finishSpeedAccuracy >= 1.0 || unstableStart`）で
+  「参考値」バッジ表示。手持ち計測を**禁止せず**、品質を示す方針。
+
+## 7. 課金（ハイブリッドモデル・v0.1.27）
+
+**計測は常に無料・無制限。無料ユーザーは履歴を `StoreManager.freeHistoryLimit`(=5)
+件まで保存でき、6件目の保存時にペイウォール提示**（計測は止めない）。
+- 旧「無料N回で計測自体をブロック」型は廃止。`StoreManager` は `isPurchased` 中心＋
+  `canSaveAnother(currentCount:)` / `freeSlotsRemaining(currentCount:)`。判定は実際の
+  `records.count`（SwiftData）ベース。
+- 保存は ContentView の `attemptSaveAndArm` / `attemptSaveResult` で件数判定。上限なら
+  `presentFreeLimitPaywall`（`freeLimitNoticeShown` で同一上限中は1回だけ提示、空き/
+  購入でリセット）。計測は常に arm。
+- 買い切り（非消費型 IAP `com.acceltimer.app.AccelTimer.unlock`、¥800、StoreKit2）。
+  ローカルテストは `AccelTimer.storekit` をスキームが参照。
+- `TrialKeychain.swift` は現在未使用（将来の不正防止用に残置）。
+
+## 8. 省電力
+
+- **カメラセッション遅延起動（v0.1.23）**: 動画ON時、`buildSession` は起動せず、
+  `startRecording`（停車確認後のプリロール開始）でセッション起動、保存/破棄で停止
+  （`pauseSessionRunning`）。待機中ずっとカメラを回さない。ライブプレビューは無い。
+- 表示間引き: 速度Text は `displaySpeedKmh`(~10Hz)、タイムは `displayElapsedTime`(~15Hz)。
+  動画オーバーレイは `fusedSpeedKmh`/`elapsedTime`(100Hz) のままで滑らかさ維持。
+- ライフサイクル: `scenePhase` で背面化/ロック時に計測を安全中止（`abortRunDueTo
+  Background`）。`UIBackgroundModes` は使わない。計測タブ表示中は `isIdleTimerDisabled`。
+
+## 9. 加速度グラフ（v0.1.29）
+
+発進直後の加速度は `startMeasurement` がリングバッファ(`ringBufferCapacity=400`,
+**4秒**)をダンプして `accelSamples`(t≥0) を作る。GPS トリガー遅延時に発進直後が
+バッファから押し出される問題に対し 2秒→4秒へ拡大済み。
+
+## 10. その他の機能
+
+- **多言語**: String Catalog（`Localizable.xcstrings` ソース日本語＋en/ko/zh-Hans、
+  `InfoPlist.xcstrings`）。`String(localized:)` の補間は %@ / %lld でキーが変わる点に注意。
+  単位 km/h は維持。
+- **国コード記録**: `CountryGeocoder` が逆ジオコーディングで後追いバックフィル
+  （将来の国別ランキング下準備）。
+- **動画プリロール**: READY から録画開始し、保存時に発進点へトリミング（巻き取り）。
+  オーバーレイ描画は UIKit 非依存（CoreText/CoreGraphics）。
+- **常時デバッグログ**: `DebugLogger` が `Documents/debug/debug.csv` に GPS/状態を追記
+  （計測保存と独立）。未トリガー調査用。計測ログは `MeasurementLogger`（GPS/MOTION/
+  EVENT を CSV）。
+- 履歴は `TimerEngine.trimHistory` がリーダーボード方式（日付順30＋各速度帯上位10の
+  和集合、実質30〜70件）。履歴の「並びごと除外」フラグ `hiddenFromDate/Time`。
+
+## 11. テスト
+
+`AccelTimerTests` ターゲット（同期グループ方式、objectVersion 77）。
+`TimerEngineSplitTests` がスプリット線形補間を5ケース検証。`AccelTimer` スキームの
+TestAction に含まれる。新規ロジックは可能な限り純粋関数に抽出してテストする方針。
+
+## 12. リリース前 TODO・既知のトレードオフ
+
+- `SettingsView` の「購入画面を表示（検証用）」デバッグボタンを削除する。
+- 減速リセット無効による水増しタイムは現状許容（必要なら保存時の事後判定を相談）。
+- App Store 配布には Apple Developer Program 加入・IAP 登録・審査・銀行/税務契約が必要。
+  個人アカウントは販売者名に本名が公開される点に留意。
+- GitHub PAT は 2026-09-13 失効予定。push 不可になったら再発行しキーチェーンに再保存。
+
+## 13. 実機ログの解析運用
+
+ユーザーは実走後 `Documents` 配下の `debug/debug.csv`（常時ログ：wall_time, state,
+gps_mps, gps_acc_mps, h_acc_m, speed_kmh, peak_kmh, conf_stopped, dev_steady, event）と
+`logs/accel_*.csv`（計測ごと：wall_time, elapsed_s, source(GPS/MOTION/EVENT),
+gps_speed_mps, gps_acc_mps, h_acc_m, accel_mps2, accel_sign, kalman_mps, display_kmh,
+event）を Downloads の日付フォルダに格納して共有する。Python で解析し、速度
+プロファイル・スプリット・GPS精度・誤発進などを検証してから修正するのが定石。
