@@ -207,8 +207,12 @@ final class TimerEngine {
     }
 
     init() {
-        location.onSpeedUpdate = { [weak self] speedMs, timestamp, speedAccuracy in
-            self?.handleGPS(speedMs: speedMs, timestamp: timestamp, speedAccuracyMs: speedAccuracy)
+        location.onSpeedUpdate = { [weak self] speedMs, timestamp, speedAccuracy, horizontalAccuracy, coordinate in
+            self?.handleGPS(speedMs: speedMs,
+                            timestamp: timestamp,
+                            speedAccuracyMs: speedAccuracy,
+                            horizontalAccuracyM: horizontalAccuracy,
+                            coordinate: coordinate)
         }
         motion.onMotionUpdate = { [weak self] accelMs2, motionTs in
             self?.handleMotion(accelMs2: accelMs2, timestamp: motionTs)
@@ -349,56 +353,39 @@ final class TimerEngine {
 
     // MARK: - GPS handler
 
-    private func handleGPS(speedMs: Double, timestamp: Date, speedAccuracyMs: Double) {
+    private func handleGPS(speedMs: Double, timestamp: Date,
+                           speedAccuracyMs: Double,
+                           horizontalAccuracyM: Double,
+                           coordinate: CLLocationCoordinate2D) {
         // motion.timestamp → Date 変換オフセットをGPS更新ごとに更新（100Hzでの毎回計算を回避）
         motionToWallOffset = Date().timeIntervalSinceReferenceDate - ProcessInfo.processInfo.systemUptime
-        // hAcc を先に読む（Kalman 更新可否の判定と switch .armed ガードで共用）
-        let hAcc = location.horizontalAccuracy
-
-        // カルマンフィルタは armed/running 中のみ更新
-        // finished 後は p→0 となりフィルタが固まるため GPS 直読みに切り替える
-        if state == .running {
-            kalman.update(gpsSpeedMs: speedMs, speedAccuracyMs: speedAccuracyMs)
-        } else if state == .armed {
-            if hAcc >= 0, hAcc < 30 {
-                // 精度良好: GPS速度で Kalman を更新
-                // 停車ノイズ範囲内（speedMs ≤ 精度）ならゼロ方向へ誘導して表示ジッタを抑制
-                if speedMs > max(0.56, speedAccuracyMs) {
-                    kalman.update(gpsSpeedMs: speedMs, speedAccuracyMs: speedAccuracyMs)
-                } else {
-                    // GPS が停車を示している → Kalman を完全リセットしてドリフトを防止
-                    // 弱い補正（soft update）では GPS 精度が悪い時（>1 m/s）に加速度計ノイズに
-                    // 負けて Kalman が偽速度（7〜9 km/h）を蓄積するため、ハードリセットで対処
-                    kalman.reset()
-                }
-            } else {
-                // 精度不良: 更新前にリセット（不良GPS値が Kalman に混入するのを防ぐ）
-                kalman.reset()
-            }
-        }
+        let hAcc = horizontalAccuracyM
+        var rememberGPSSample = true
 
         defer {
-            let delta = speedMs - lastGPSSpeedMs
-            recentGPSDeltas.append(delta)
-            if recentGPSDeltas.count > 2 { recentGPSDeltas.removeFirst() }
-            let avgDelta = recentGPSDeltas.reduce(0, +) / Double(recentGPSDeltas.count)
-            // 加速方向: 単一の正スパイク(>0.3 m/s)で即時 +1 に戻す
-            //   → 一時的な負スパイクで -1 に反転した後、次の正サンプルで素早く回復
-            // 減速方向: 直近2サンプル平均が -0.3 m/s 未満の場合のみ -1 に変更
-            //   → 単発ノイズスパイクで符号が反転し速度表示が一時的に下がるのを防止
-            if delta > 0.3 {
-                accelSign = 1.0
-            } else if recentGPSDeltas.count >= 2 && avgDelta < -0.3 {
-                accelSign = -1.0
+            if rememberGPSSample {
+                let delta = speedMs - lastGPSSpeedMs
+                recentGPSDeltas.append(delta)
+                if recentGPSDeltas.count > 2 { recentGPSDeltas.removeFirst() }
+                let avgDelta = recentGPSDeltas.reduce(0, +) / Double(recentGPSDeltas.count)
+                // 加速方向: 単一の正スパイク(>0.3 m/s)で即時 +1 に戻す
+                //   → 一時的な負スパイクで -1 に反転した後、次の正サンプルで素早く回復
+                // 減速方向: 直近2サンプル平均が -0.3 m/s 未満の場合のみ -1 に変更
+                //   → 単発ノイズスパイクで符号が反転し速度表示が一時的に下がるのを防止
+                if delta > 0.3 {
+                    accelSign = 1.0
+                } else if recentGPSDeltas.count >= 2 && avgDelta < -0.3 {
+                    accelSign = -1.0
+                }
+                lastGPSSpeedMs = speedMs
+                lastGPSTime    = timestamp
             }
-            lastGPSSpeedMs = speedMs
-            lastGPSTime    = timestamp
         }
 
         let speedKmh = speedMs * 3.6
 
         // 位置ベース速度の検算（約1秒間隔で更新。GPS位置ジッタを平均化するため短すぎる間隔では測らない）
-        let coordNow = location.coordinate
+        let coordNow = coordinate
         if let anchor = posAnchorCoord {
             let dt = timestamp.timeIntervalSince(posAnchorTime)
             if dt >= 1.0 {
@@ -413,8 +400,36 @@ final class TimerEngine {
             posAnchorTime  = timestamp
         }
         // Doppler が高速(>30km/h)を示すのに位置がほとんど動いていない＝GPS Doppler の誤り（停車中の偽高速）。
-        // 巡航中は位置も同等に動くので誤抑制しない。表示のみに使い、計測トリガー/split には影響させない。
+        // 巡航中は位置も同等に動くので誤抑制しない。RUNNING中は計測値にも混ぜず、偽FINISHを防ぐ。
         let dopplerLooksFake = speedKmh > 30.0 && positionSpeedKmh < speedKmh * 0.4
+        if dopplerLooksFake {
+            rememberGPSSample = false
+        }
+
+        // カルマンフィルタは armed/running 中のみ更新。
+        // 偽Dopplerは速度推定へ混ぜると後続のMotion splitにも波及するため除外する。
+        // finished 後は p→0 となりフィルタが固まるため GPS 直読みに切り替える。
+        if state == .running {
+            if !dopplerLooksFake {
+                kalman.update(gpsSpeedMs: speedMs, speedAccuracyMs: speedAccuracyMs)
+            }
+        } else if state == .armed {
+            if hAcc >= 0, hAcc < 30, !dopplerLooksFake {
+                // 精度良好: GPS速度で Kalman を更新
+                // 停車ノイズ範囲内（speedMs ≤ 精度）ならゼロ方向へ誘導して表示ジッタを抑制
+                if speedMs > max(0.56, speedAccuracyMs) {
+                    kalman.update(gpsSpeedMs: speedMs, speedAccuracyMs: speedAccuracyMs)
+                } else {
+                    // GPS が停車を示している → Kalman を完全リセットしてドリフトを防止
+                    // 弱い補正（soft update）では GPS 精度が悪い時（>1 m/s）に加速度計ノイズに
+                    // 負けて Kalman が偽速度（7〜9 km/h）を蓄積するため、ハードリセットで対処
+                    kalman.reset()
+                }
+            } else {
+                // 精度不良または偽Doppler: 更新前にリセット（不良GPS値が Kalman に混入するのを防ぐ）
+                kalman.reset()
+            }
+        }
 
         var gpsLogEvent = ""   // switch 内で設定したイベント名を switch 後にまとめてログ
 
@@ -463,7 +478,7 @@ final class TimerEngine {
             let launchThresholdMs = min(10.0 / 3.6, max(5.0 / 3.6, speedAccuracyMs * 2.0))
             // speedAccuracyMs < 2.0: UI の「GPS確認中（赤）」表示中は発進トリガーを禁止
             // hAcc<30 でも sAcc>=2.0 の場合（GPS起動直後）に計測が開始されるのを防ぐ
-            if confirmedStoppedWhileArmed && speedMs > launchThresholdMs && speedAccuracyMs < 2.0 {
+            if confirmedStoppedWhileArmed && speedMs > launchThresholdMs && speedAccuracyMs < 2.0 && !dopplerLooksFake {
                 let gpsFallback = interpolatedStartTime(
                     threshold: launchThresholdMs,
                     prevSpeed: lastGPSSpeedMs, prevTime: lastGPSTime,
@@ -484,6 +499,10 @@ final class TimerEngine {
             }
 
         case .running:
+            guard !dopplerLooksFake else {
+                gpsLogEvent = "GPS_FAKE_DOPPLER"
+                break
+            }
             // 表示用：GPS DopplerをEMA平滑化（α=0.7）で表示
             // Kalmanはsplit検出専用として内部で継続動作
             // 初回サンプルはEMAではなく直接代入（初期値0によるアンダーシュートを防止）
@@ -492,7 +511,7 @@ final class TimerEngine {
             motionDisplayKmh = gpsDisplayKmh
             fusedSpeedKmh = gpsDisplayKmh
             peakSpeedKmh  = max(peakSpeedKmh, speedKmh)
-            let acc = location.horizontalAccuracy
+            let acc = hAcc
             if acc >= 0 { bestGPSAccuracy = bestGPSAccuracy < 0 ? acc : min(bestGPSAccuracy, acc) }
             let sAcc = speedAccuracyMs
             if sAcc >= 0 { bestGPSSpeedAccuracy = bestGPSSpeedAccuracy < 0 ? sAcc : min(bestGPSSpeedAccuracy, sAcc) }
@@ -508,7 +527,7 @@ final class TimerEngine {
                                      speed: fusedSpeedKmh))
             }
             // 地図用ルート座標収集（GPS 10 Hz）
-            let coord = location.coordinate
+            let coord = coordinate
             routePoints.append((lat: coord.latitude, lon: coord.longitude))
             // 停車検知：生GPS速度で判定（EMAラグなし）
             if speedKmh < 5.0 && !autoResetRequested && peakSpeedKmh >= 5.0 {

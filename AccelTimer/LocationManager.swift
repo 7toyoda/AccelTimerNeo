@@ -10,7 +10,7 @@ final class LocationManager: NSObject {
     private(set) var authStatus: CLAuthorizationStatus = .notDetermined
     private(set) var coordinate = CLLocationCoordinate2D(latitude: 0, longitude: 0)
 
-    var onSpeedUpdate: ((Double, Date, Double) -> Void)?
+    var onSpeedUpdate: ((Double, Date, Double, Double, CLLocationCoordinate2D) -> Void)?
 
     private let clManager = CLLocationManager()
 
@@ -49,14 +49,12 @@ extension LocationManager: CLLocationManagerDelegate {
                                      coord: $0.coordinate) }
         Task { @MainActor [weak self] in
             guard let self else { return }
-            if let last = snapshots.last {
-                self.speedMs = last.speed
-                self.horizontalAccuracy = last.hAcc
-                self.speedAccuracy = last.sAcc
-                self.coordinate = last.coord
-            }
             for snap in snapshots {
-                self.onSpeedUpdate?(snap.speed, snap.ts, snap.sAcc)
+                self.speedMs = snap.speed
+                self.horizontalAccuracy = snap.hAcc
+                self.speedAccuracy = snap.sAcc
+                self.coordinate = snap.coord
+                self.onSpeedUpdate?(snap.speed, snap.ts, snap.sAcc, snap.hAcc, snap.coord)
             }
         }
     }

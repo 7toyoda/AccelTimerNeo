@@ -5,7 +5,7 @@
 **変更前に該当箇所を読み、ここに書かれた意図的な設計を壊さないこと。** 記述と実
 コードが食い違う場合は実コードを正とし、本書を更新すること。
 
-最終更新時の状態: バージョン 0.1.42 系 / Swift 6 / SwiftUI / SwiftData / iOS 17+。
+最終更新時の状態: バージョン 0.1.46 系 / Swift 6 / SwiftUI / SwiftData / iOS 17+。
 リポジトリ: GitHub `toy0da/accel-timer`（main ブランチ運用）。
 
 ---
@@ -24,6 +24,9 @@
 - GPS 精度判定は **Doppler 速度精度 `speedAccuracy`(m/s)**。青<0.3 / 緑<1.0 /
   黄<2.0 / 赤≥2.0。赤＝UI「GPS確認中」。hAcc が良くても sAcc が悪い場合があるため
   速度精度を採用。
+- 位置ベース速度との検算で Doppler 偽高速（速度だけ高く、座標がほぼ動かない）を検出した
+  GPS サンプルは RUNNING 中の Kalman / split / finish / peak に混ぜない。停車中のGPS速度
+  グリッチによる偽FINISHを防ぐため。
 
 ## 2. 発進検出（lookback と微速クリープ対策）
 
