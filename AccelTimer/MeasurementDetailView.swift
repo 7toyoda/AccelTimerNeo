@@ -10,6 +10,20 @@ struct MeasurementDetailView: View {
     @Environment(StoreManager.self) private var store
     @AppStorage("speedUnit") private var speedUnitRaw: String = SpeedUnit.defaultForLocale.rawValue
     private var unit: SpeedUnit { SpeedUnit(rawValue: speedUnitRaw) ?? .kmh }
+
+    /// 単位ごとのスプリット時刻。km/h は保存値、mph はタイムラインから補間。
+    private var detailSplitValues: [Double?] {
+        switch unit {
+        case .kmh:
+            return [record.split40 > 0 ? record.split40 : nil,
+                    record.split60 > 0 ? record.split60 : nil,
+                    record.split80 > 0 ? record.split80 : nil,
+                    record.isComplete ? record.totalTime : nil]
+        case .mph:
+            let tl = record.speedTimeline
+            return unit.milestonesKmh.map { SpeedUnit.time(toReachKmh: $0, in: tl) }
+        }
+    }
     @State private var videoPlayer: AVPlayer? = nil
     @State private var isFullScreen: Bool = false
     /// 共有用に書き出した結果カード画像（無料は透かし付き）。
@@ -233,16 +247,18 @@ struct MeasurementDetailView: View {
     // MARK: - Splits
 
     private var splitsSection: some View {
-        VStack(spacing: 0) {
-            DetailSplitRow(label: "0 → 40 km/h",  value: record.split40 > 0 ? record.split40 : nil)
+        let labels = unit.milestoneLabels
+        let values = detailSplitValues
+        return VStack(spacing: 0) {
+            DetailSplitRow(label: "\(labels[0]) \(unit.label)", value: values[0])
             Divider().opacity(0.2).padding(.horizontal)
-            DetailSplitRow(label: "0 → 60 km/h",  value: record.split60 > 0 ? record.split60 : nil)
+            DetailSplitRow(label: "\(labels[1]) \(unit.label)", value: values[1])
             Divider().opacity(0.2).padding(.horizontal)
-            DetailSplitRow(label: "0 → 80 km/h",  value: record.split80 > 0 ? record.split80 : nil)
+            DetailSplitRow(label: "\(labels[2]) \(unit.label)", value: values[2])
             Divider().opacity(0.4).padding(.horizontal)
             DetailSplitRow(
-                label: "0 → 100 km/h",
-                value: record.isComplete ? record.totalTime : nil,
+                label: "\(labels[3]) \(unit.label)",
+                value: values[3],
                 isHighlight: true
             )
         }
@@ -574,7 +590,7 @@ struct MeasurementDetailView: View {
         HStack(spacing: 0) {
             StatItem(label: String(localized: "最高速度"),
                      value: record.maxSpeedKmh > 0
-                         ? String(format: "%.1f km/h", record.maxSpeedKmh)
+                         ? String(format: "%.1f \(unit.label)", unit.value(fromKmh: record.maxSpeedKmh))
                          : "--")
         }
         .padding(.vertical, 12)
