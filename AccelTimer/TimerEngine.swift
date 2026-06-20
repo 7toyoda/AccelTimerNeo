@@ -35,6 +35,8 @@ final class TimerEngine {
     var locationDenied: Bool { location.authStatus == .denied || location.authStatus == .restricted }
     var autoResetRequested: Bool = false
     private(set) var isResultSaved: Bool = false
+    /// 直近に永続化したレコード（新記録の祝福カード表示に使う）。
+    private(set) var lastSavedRecord: MeasurementRecord?
     var bestTimes: [Double?] = [nil, nil, nil, nil]
     /// バックグラウンド移行による計測中止フラグ（復帰時にトーストで通知）
     private(set) var backgroundAbortedRun: Bool = false
@@ -954,6 +956,7 @@ final class TimerEngine {
         logger.stop()
         record.logFileName = logger.writeCSV(recordDate: now) ?? ""
         context.insert(record)
+        lastSavedRecord = record
         trimHistory(context: context)
     }
 

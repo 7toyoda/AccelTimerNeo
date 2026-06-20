@@ -2,13 +2,11 @@ import Foundation
 import StoreKit
 
 /// 買い切り解放（StoreKit 2 非消費型 IAP）を管理する。
-/// 計測自体は常に無料・無制限。無料ユーザーは履歴を `freeHistoryLimit` 件まで保存でき、
-/// それを超える保存はブロックしてペイウォールを表示する（ハイブリッド課金モデル）。
+/// 計測・履歴の保存・共有はすべて無料・無制限。無料ユーザーが共有する結果カードや動画には
+/// 「体験版」の透かしが入り、買い切り解放で透かしが消える（`showsWatermark`）。
 @Observable
 @MainActor
 final class StoreManager {
-    /// 無料で保存できる履歴件数。これを超えて保存しようとすると買い切りが必要。
-    static let freeHistoryLimit = 5
     /// App Store Connect で登録する非消費型プロダクト ID。
     static let unlockProductID = "com.acceltimer.app.AccelTimer.unlock"
 
@@ -22,14 +20,10 @@ final class StoreManager {
     /// 共有時に透かしを入れるか（未購入なら true）。買い切り解放で透かしが消える。
     var showsWatermark: Bool { !isPurchased }
 
-    /// 現在の保存件数で、もう1件保存できるか（購入済みなら常に true）。
-    func canSaveAnother(currentCount: Int) -> Bool {
-        isPurchased || currentCount < Self.freeHistoryLimit
-    }
-    /// 無料で残り保存できる件数。
-    func freeSlotsRemaining(currentCount: Int) -> Int {
-        max(0, Self.freeHistoryLimit - currentCount)
-    }
+    /// もう1件保存できるか。計測・履歴の保存は無料・無制限になったため常に true。
+    /// （課金は「共有物の透かし除去」へ移行。`showsWatermark` 参照）
+    /// 保存経路の呼び出し側互換のため関数として残す。
+    func canSaveAnother(currentCount: Int) -> Bool { true }
 
     init() {
         // App Store 外（他デバイスでの購入・返金など）からのトランザクション更新を監視

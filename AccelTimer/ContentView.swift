@@ -100,6 +100,8 @@ struct MeasureView: View {
     @State private var backgroundAbortToast = false
     // 無料の保存上限に達したペイウォールを一度提示したら、空きができるまで連発しない
     @State private var freeLimitNoticeShown = false
+    // 新記録（自己ベスト更新）を出したときに祝福シートで表示するレコード
+    @State private var celebrationRecord: MeasurementRecord?
 
     private static let splitLabels = ["0→40", "0→60", "0→80", "0→100"]
 
@@ -107,7 +109,10 @@ struct MeasureView: View {
     /// 計測自体は無料なので、保存できなくても arm() で次の計測へ進める。
     private func attemptSaveAndArm() {
         if store.canSaveAnother(currentCount: records.count) {
+            let prevBest = best100
+            let prevSaved = engine.lastSavedRecord
             engine.saveAndArm(context: modelContext)
+            presentCelebrationIfNewBest(prevBest: prevBest, prevSaved: prevSaved)
         } else {
             // 保存上限：レコードを保存しない。arm() の finished→armed 遷移で動画だけ
             // 保存され、対応レコードが無く孤立／別計測へ誤ひも付けされるのを防ぐため、
@@ -121,8 +126,11 @@ struct MeasureView: View {
     /// autoReset=OFF 完了時の保存を試みる。上限なら保存せず結果表示を維持し、解放を促す。
     private func attemptSaveResult() {
         if store.canSaveAnother(currentCount: records.count) {
+            let prevBest = best100
+            let prevSaved = engine.lastSavedRecord
             stopVideoRecordingIfNeeded()              // レコードと対で動画を保存
             engine.saveResult(context: modelContext)
+            presentCelebrationIfNewBest(prevBest: prevBest, prevSaved: prevSaved)
         } else {
             discardCurrentVideo()                      // 上限：動画も保存しない
             presentFreeLimitPaywall()
@@ -143,6 +151,15 @@ struct MeasureView: View {
         guard !freeLimitNoticeShown else { return }
         freeLimitNoticeShown = true
         showPaywall = true
+    }
+
+    /// 直前の保存が自己ベスト更新（完走 かつ 旧ベストより速い）なら祝福シートを出す。
+    /// `prevSaved` と異なる新レコードが保存された場合のみ対象（未保存ランの取り違え防止）。
+    private func presentCelebrationIfNewBest(prevBest: Double?, prevSaved: MeasurementRecord?) {
+        guard let saved = engine.lastSavedRecord, saved !== prevSaved, saved.isComplete else { return }
+        if prevBest == nil || saved.totalTime < prevBest! {
+            celebrationRecord = saved
+        }
     }
 
     // 各速度帯のベストタイム
@@ -331,6 +348,16 @@ struct MeasureView: View {
         }
         .sheet(isPresented: $showPaywall) {
             PaywallView(store: store) { showPaywall = false }
+        }
+        // 新記録（自己ベスト更新）の祝福シート。トロフィー表示＋透かし除去訴求（ピーク課金導線）。
+        .sheet(item: $celebrationRecord) { record in
+            CelebrationView(record: record, store: store) {
+                // 透かしを消す：祝福を閉じてからペイウォールを開く（二重シート競合を避ける）
+                celebrationRecord = nil
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { showPaywall = true }
+            } onClose: {
+                celebrationRecord = nil
+            }
         }
         .onChange(of: videoEnabled) { _, enabled in
             if enabled {

@@ -26,20 +26,14 @@ struct SettingsView: View {
                             Label("購入済み（全機能解放）", systemImage: "checkmark.seal.fill")
                                 .foregroundStyle(.green)
                         } else {
-                            HStack {
-                                Text("無料保存の残り")
-                                Spacer()
-                                Text("\(store.freeSlotsRemaining(currentCount: records.count)) / \(StoreManager.freeHistoryLimit) 件")
-                                    .foregroundStyle(.secondary)
-                            }
-                            Text("計測は無料・無制限。履歴の保存は\(StoreManager.freeHistoryLimit)件まで無料です。")
+                            Text("計測・履歴の保存・共有はすべて無料です。共有する結果カードや動画には「体験版」の透かしが入ります。")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
-                            // 無料枠が残っていても、いつでも購入して全機能を解放できる
+                            // いつでも購入して透かしを消し、全機能を解放できる
                             Button {
                                 showPaywall = true
                             } label: {
-                                Label("履歴を無制限に解放（購入）", systemImage: "lock.open.fill")
+                                Label("透かしを消して全機能を解放（購入）", systemImage: "lock.open.fill")
                                     .foregroundStyle(.orange)
                             }
                             Button {

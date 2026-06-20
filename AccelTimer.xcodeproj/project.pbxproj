@@ -17,9 +17,9 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		ACC0F1600000000000000001 /* Version.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config/Version.xcconfig; sourceTree = "<group>"; };
 		594BB0012FC162D00009A57F /* AccelTimer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AccelTimer.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		AC7E000000000000000000A2 /* AccelTimerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AccelTimerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		ACC0F1600000000000000001 /* Config/Version.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config/Version.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -69,7 +69,7 @@
 		594BAFF82FC162D00009A57F = {
 			isa = PBXGroup;
 			children = (
-				ACC0F1600000000000000001 /* Version.xcconfig */,
+				ACC0F1600000000000000001 /* Config/Version.xcconfig */,
 				594BB0032FC162D00009A57F /* AccelTimer */,
 				AC7E000000000000000000A6 /* AccelTimerTests */,
 				594BB0022FC162D00009A57F /* Products */,
@@ -220,7 +220,7 @@
 /* Begin XCBuildConfiguration section */
 		594BB00C2FC162D20009A57F /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = ACC0F1600000000000000001 /* Version.xcconfig */;
+			baseConfigurationReference = ACC0F1600000000000000001 /* Config/Version.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -284,7 +284,7 @@
 		};
 		594BB00D2FC162D20009A57F /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = ACC0F1600000000000000001 /* Version.xcconfig */;
+			baseConfigurationReference = ACC0F1600000000000000001 /* Config/Version.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
