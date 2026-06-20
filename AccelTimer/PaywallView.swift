@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// 結果カードの透かし除去を訴求する購入画面。買い切り（非消費型）で全機能を永久解放。
+/// 結果カードの透かし除去を訴求する購入画面。買い切り（非消費型）で透かしを永久解除。
 /// アプリの世界観に合わせたレーシング調・カラフルなエッジ演出で訴求する。
 struct PaywallView: View {
     let store: StoreManager
@@ -142,9 +142,9 @@ struct PaywallView: View {
                 if store.purchaseInFlight {
                     ProgressView().tint(.black)
                 } else if let price = store.displayPrice {
-                    Text("\(price) で全機能を解放")
+                    Text("\(price) で透かしを解除")
                 } else {
-                    Text("購入して解放")
+                    Text("購入して透かしを解除")
                 }
             }
             .font(.system(size: 18, weight: .heavy, design: .rounded))

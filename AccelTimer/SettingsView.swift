@@ -16,6 +16,7 @@ struct SettingsView: View {
     @State private var showDisclaimer = false
     @State private var showCameraDeniedAlert = false
     @State private var showMicDeniedAlert = false
+    private var selectedUnit: SpeedUnit { SpeedUnit(rawValue: speedUnitRaw) ?? .kmh }
 
     var body: some View {
         NavigationStack {
@@ -24,17 +25,17 @@ struct SettingsView: View {
                 Form {
                     Section("ライセンス") {
                         if store.isPurchased {
-                            Label("購入済み（全機能解放）", systemImage: "checkmark.seal.fill")
+                            Label("購入済み（透かし解除済み）", systemImage: "checkmark.seal.fill")
                                 .foregroundStyle(.green)
                         } else {
-                            Text("計測・履歴の保存・共有はすべて無料です。共有する結果カードには「体験版」の透かしが入ります。")
+                            Text("計測・履歴保存・カード共有は無料です。購入すると共有する結果カードから「体験版」の透かしを外せます。")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
-                            // いつでも購入して透かしを消し、全機能を解放できる
+                            // いつでも購入して、共有カードの透かしを消せる。
                             Button {
                                 showPaywall = true
                             } label: {
-                                Label("透かしを消して全機能を解放（購入）", systemImage: "lock.open.fill")
+                                Label("結果カードの透かしを消す（購入）", systemImage: "lock.open.fill")
                                     .foregroundStyle(.orange)
                             }
                             Button {
@@ -51,23 +52,23 @@ struct SettingsView: View {
                             Text("mph").tag(SpeedUnit.mph.rawValue)
                         }
                         .pickerStyle(.segmented)
-                        Text(speedUnitRaw == SpeedUnit.mph.rawValue
-                             ? "速度・スプリットを mph で表示します（主役は 0-60 mph）"
-                             : "速度・スプリットを km/h で表示します（主役は 0-100 km/h）")
+                        Text(selectedUnit == .mph
+                             ? "画面・履歴・共有カードを 0-60 mph 中心で表示します。計測完了判定は引き続き 100 km/h 到達です。"
+                             : "画面・履歴・共有カードを 0-100 km/h 中心で表示します。計測完了判定も 100 km/h 到達です。")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
                     Section("計測完了後の動作") {
                         Toggle("停車で自動再計測", isOn: $autoReset)
                         Text(autoReset
-                             ? "100 km/h 到達後、停車すると自動で次の計測を開始します"
-                             : "100 km/h 到達後、「再計測」ボタンを押すまで結果を表示し続けます")
+                             ? "計測完了後、停車すると自動で次の計測を開始します"
+                             : "計測完了後、「再計測」ボタンを押すまで結果を表示し続けます")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
                     Section("音声") {
                         Toggle("速度読み上げ", isOn: $speakEnabled)
-                        Text("40 / 60 / 80 / 100 km/h 通過時に速度を読み上げます")
+                        Text("\(selectedUnit.milestoneShortLabels.joined(separator: " / ")) \(selectedUnit.label) 通過時に速度を読み上げます")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
