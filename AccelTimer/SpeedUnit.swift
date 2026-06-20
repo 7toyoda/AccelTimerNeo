@@ -33,6 +33,14 @@ enum SpeedUnit: String, CaseIterable, Identifiable {
         }
     }
 
+    /// マイルストーンの短縮ラベル（数値のみ）。
+    var milestoneShortLabels: [String] {
+        switch self {
+        case .kmh: return ["40", "60", "80", "100"]
+        case .mph: return ["15", "30", "45", "60"]
+        }
+    }
+
     /// ヘッドライン（主役）マイルストーンの km/h 相当（km/h=100、mph=60mph）。
     var headlineKmh: Double { milestonesKmh.last ?? 100 }
 

@@ -6,11 +6,21 @@ enum HistorySortOrder: String, CaseIterable {
     case date = "日付順"
 }
 
-enum TimeSortSplit: String, CaseIterable {
-    case s100 = "0→100"
-    case s80  = "0→80"
-    case s60  = "0→60"
-    case s40  = "0→40"
+extension MeasurementRecord {
+    /// 指定単位・帯(0..3)のスプリット時刻。km/h は保存値、mph はタイムライン補間。
+    func splitTime(unit: SpeedUnit, band: Int) -> Double? {
+        switch unit {
+        case .kmh:
+            switch band {
+            case 0: return split40 > 0 ? split40 : nil
+            case 1: return split60 > 0 ? split60 : nil
+            case 2: return split80 > 0 ? split80 : nil
+            default: return isComplete ? totalTime : nil
+            }
+        case .mph:
+            return SpeedUnit.time(toReachKmh: unit.milestonesKmh[band], in: speedTimeline)
+        }
+    }
 }
 
 struct HistoryView: View {
@@ -22,7 +32,9 @@ struct HistoryView: View {
     // （@Environment(\.editMode) は NavigationStack 外側の値＝nil を指し、List に効かないため）
     @State private var editMode: EditMode = .inactive
     @State private var sortOrder: HistorySortOrder = .time
-    @State private var timeSortSplit: TimeSortSplit = .s100
+    @State private var bandIndex: Int = 3   // 0..3 のマイルストーン帯（3=ヘッドライン）
+    @AppStorage("speedUnit") private var speedUnitRaw: String = SpeedUnit.defaultForLocale.rawValue
+    private var unit: SpeedUnit { SpeedUnit(rawValue: speedUnitRaw) ?? .kmh }
 
     private var sortedRecords: [MeasurementRecord] {
         switch sortOrder {
@@ -31,17 +43,14 @@ struct HistoryView: View {
             return records.filter { !$0.hiddenFromDate }
         case .time:
             // 「タイム順から除外」したレコードは全速度帯で非表示（日付順には残り得る）
-            let visible = records.filter { !$0.hiddenFromTime }
-            switch timeSortSplit {
-            case .s100:
-                return visible.filter(\.isComplete).sorted { $0.totalTime < $1.totalTime }
-            case .s80:
-                return visible.filter { $0.split80 > 0 }.sorted { $0.split80 < $1.split80 }
-            case .s60:
-                return visible.filter { $0.split60 > 0 }.sorted { $0.split60 < $1.split60 }
-            case .s40:
-                return visible.filter { $0.split40 > 0 }.sorted { $0.split40 < $1.split40 }
-            }
+            return records
+                .filter { !$0.hiddenFromTime }
+                .compactMap { rec -> (MeasurementRecord, Double)? in
+                    guard let t = rec.splitTime(unit: unit, band: bandIndex) else { return nil }
+                    return (rec, t)
+                }
+                .sorted { $0.1 < $1.1 }
+                .map(\.0)
         }
     }
 
@@ -70,9 +79,9 @@ struct HistoryView: View {
                         .background(Color.black)
 
                         if sortOrder == .time {
-                            Picker("速度帯", selection: $timeSortSplit) {
-                                ForEach(TimeSortSplit.allCases, id: \.self) {
-                                    Text($0.rawValue).tag($0)
+                            Picker("速度帯", selection: $bandIndex) {
+                                ForEach(0..<4, id: \.self) { i in
+                                    Text(unit.milestoneLabels[i]).tag(i)
                                 }
                             }
                             .pickerStyle(.segmented)
@@ -86,7 +95,8 @@ struct HistoryView: View {
                                 NavigationLink {
                                     MeasurementDetailView(record: record, isBest: isBest(record))
                                 } label: {
-                                    HistoryRow(record: record, isBest: isBest(record), featuredSplit: activeSplit)
+                                    HistoryRow(record: record, isBest: isBest(record),
+                                               unit: unit, band: activeBand)
                                 }
                                 .listRowBackground(Color.white.opacity(0.04))
                             }
@@ -120,28 +130,19 @@ struct HistoryView: View {
         }
     }
 
-    private var activeSplit: TimeSortSplit {
-        sortOrder == .time ? timeSortSplit : .s100
+    private var activeBand: Int {
+        sortOrder == .time ? bandIndex : 3
     }
 
     private func isBest(_ record: MeasurementRecord) -> Bool {
         // タイム順から除外された記録はベスト（★）対象外（リーダーボード上の最速を表すため）
         guard !record.hiddenFromTime else { return false }
-        let pool = records.filter { !$0.hiddenFromTime }
-        switch activeSplit {
-        case .s100:
-            guard record.isComplete else { return false }
-            return record.totalTime == pool.filter(\.isComplete).map(\.totalTime).min()
-        case .s80:
-            guard record.split80 > 0 else { return false }
-            return record.split80 == pool.filter { $0.split80 > 0 }.map(\.split80).min()
-        case .s60:
-            guard record.split60 > 0 else { return false }
-            return record.split60 == pool.filter { $0.split60 > 0 }.map(\.split60).min()
-        case .s40:
-            guard record.split40 > 0 else { return false }
-            return record.split40 == pool.filter { $0.split40 > 0 }.map(\.split40).min()
-        }
+        guard let value = record.splitTime(unit: unit, band: activeBand) else { return false }
+        let best = records
+            .filter { !$0.hiddenFromTime }
+            .compactMap { $0.splitTime(unit: unit, band: activeBand) }
+            .min()
+        return best.map { value <= $0 } ?? false
     }
 
     /// スワイプ削除＝「今見ている並びから除外」。両方の並びから出なくなったら実体を完全削除する。
@@ -168,24 +169,15 @@ struct HistoryView: View {
 struct HistoryRow: View {
     let record: MeasurementRecord
     let isBest: Bool
-    var featuredSplit: TimeSortSplit = .s100
+    var unit: SpeedUnit = .kmh
+    var band: Int = 3
 
     private var featuredLabel: String {
-        switch featuredSplit {
-        case .s100: return "0 → 100 km/h"
-        case .s80:  return "0 → 80 km/h"
-        case .s60:  return "0 → 60 km/h"
-        case .s40:  return "0 → 40 km/h"
-        }
+        "\(unit.milestoneLabels[band]) \(unit.label)"
     }
 
     private var featuredTime: Double? {
-        switch featuredSplit {
-        case .s100: return record.isComplete ? record.totalTime : nil
-        case .s80:  return record.split80 > 0 ? record.split80 : nil
-        case .s60:  return record.split60 > 0 ? record.split60 : nil
-        case .s40:  return record.split40 > 0 ? record.split40 : nil
-        }
+        record.splitTime(unit: unit, band: band)
     }
 
     private static let dateFormatter: DateFormatter = {
@@ -254,7 +246,7 @@ struct HistoryRow: View {
                     }
                 }
                 Spacer()
-                if featuredSplit == .s100 && !record.isComplete {
+                if band == 3 && featuredTime == nil {
                     Text("未達成")
                         .font(.caption2)
                         .padding(.horizontal, 6)
@@ -266,13 +258,13 @@ struct HistoryRow: View {
                 }
             }
 
-            // スプリット
+            // スプリット（フィーチャー帯以外のマイルストーンをタグ表示）
             HStack(spacing: 16) {
-                SplitTag(label: "40",  value: record.split40)
-                SplitTag(label: "60",  value: record.split60)
-                SplitTag(label: "80",  value: record.split80)
-                if featuredSplit != .s100 {
-                    SplitTag(label: "100", value: record.isComplete ? record.totalTime : 0)
+                ForEach(0..<4, id: \.self) { i in
+                    if i != band {
+                        SplitTag(label: unit.milestoneShortLabels[i],
+                                 value: record.splitTime(unit: unit, band: i) ?? 0)
+                    }
                 }
             }
         }
