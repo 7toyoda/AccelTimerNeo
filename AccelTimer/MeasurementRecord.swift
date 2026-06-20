@@ -30,6 +30,12 @@ final class MeasurementRecord {
     var split40: Double
     var split60: Double
     var split80: Double
+    // mph 表示用の高精度スプリット。計測時の TimerEngine.mphSplits を保存する。
+    // 旧レコードは 0 のままなので、表示時は speedTimeline からの後方互換フォールバックを使う。
+    var mphSplit15: Double = 0
+    var mphSplit30: Double = 0
+    var mphSplit45: Double = 0
+    var mphSplit60: Double = 0
     var maxSpeedKmh: Double
     var gpsAccuracy: Double      // 計測中の最良水平精度(m)、-1 = 不明
     var gpsSpeedAccuracy: Double = -1  // 計測中の最良Doppler速度精度(m/s)、-1 = 不明（旧レコードは-1）
@@ -76,6 +82,30 @@ final class MeasurementRecord {
         (try? JSONDecoder().decode([SpeedSample].self, from: speedTimelineData)) ?? []
     }
 
+    /// 指定単位・帯(0..3)のスプリット時刻。km/h は保存値、mph は保存済み高精度値を優先する。
+    func splitTime(unit: SpeedUnit, band: Int) -> Double? {
+        switch unit {
+        case .kmh:
+            switch band {
+            case 0: return split40 > 0 ? split40 : nil
+            case 1: return split60 > 0 ? split60 : nil
+            case 2: return split80 > 0 ? split80 : nil
+            default: return isComplete ? totalTime : nil
+            }
+        case .mph:
+            let stored: Double
+            switch band {
+            case 0: stored = mphSplit15
+            case 1: stored = mphSplit30
+            case 2: stored = mphSplit45
+            default: stored = mphSplit60
+            }
+            if stored > 0 { return stored }
+            // 後方互換: v0.1.41 以前のレコードは mph split を持たないためタイムラインから補間。
+            return SpeedUnit.time(toReachKmh: unit.milestonesKmh[band], in: speedTimeline)
+        }
+    }
+
     /// 高精度加速度タイムライン（CoreMotion 100Hz）。旧レコードは空。
     var accelTimeline: [AccelSample] {
         (try? JSONDecoder().decode([AccelSample].self, from: accelTimelineData)) ?? []
@@ -100,6 +130,8 @@ final class MeasurementRecord {
 
     init(date: Date, totalTime: Double,
          split40: Double, split60: Double, split80: Double,
+         mphSplit15: Double = 0, mphSplit30: Double = 0,
+         mphSplit45: Double = 0, mphSplit60: Double = 0,
          maxSpeedKmh: Double, gpsAccuracy: Double = -1,
          gpsSpeedAccuracy: Double = -1,
          finishSpeedAccuracy: Double = -1,
@@ -113,6 +145,10 @@ final class MeasurementRecord {
         self.split40 = split40
         self.split60 = split60
         self.split80 = split80
+        self.mphSplit15 = mphSplit15
+        self.mphSplit30 = mphSplit30
+        self.mphSplit45 = mphSplit45
+        self.mphSplit60 = mphSplit60
         self.maxSpeedKmh = maxSpeedKmh
         self.gpsAccuracy = gpsAccuracy
         self.gpsSpeedAccuracy = gpsSpeedAccuracy

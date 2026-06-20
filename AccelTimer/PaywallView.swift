@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// 無料枠を使い切った時に表示する購入画面。買い切り（非消費型）で全機能を永久解放。
+/// 結果カードの透かし除去を訴求する購入画面。買い切り（非消費型）で全機能を永久解放。
 /// アプリの世界観に合わせたレーシング調・カラフルなエッジ演出で訴求する。
 struct PaywallView: View {
     let store: StoreManager
@@ -13,8 +13,8 @@ struct PaywallView: View {
     @State private var edgeAngle: Double = 0
 
     private static let features: [(String, LocalizedStringKey)] = [
-        ("infinity",            "履歴を無制限に保存"),
-        ("video.fill",          "走行動画も無制限に保存"),
+        ("rosette",             "結果カードの透かしを除去"),
+        ("square.and.arrow.up", "クリーンなカードを共有"),
         ("chart.xyaxis.line",   "全記録のスプリット・グラフ・地図を保持")
     ]
 
@@ -33,7 +33,7 @@ struct PaywallView: View {
                     closeButton
                     hero
                     VStack(spacing: 6) {
-                        Text("プロ仕様の精度を、すべて解放")
+                        Text("クリーンな結果カードを解放")
                             .font(.system(size: 25, weight: .heavy, design: .rounded))
                             .foregroundStyle(.white)
                             .multilineTextAlignment(.center)

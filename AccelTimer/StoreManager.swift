@@ -2,7 +2,7 @@ import Foundation
 import StoreKit
 
 /// 買い切り解放（StoreKit 2 非消費型 IAP）を管理する。
-/// 計測・履歴の保存・共有はすべて無料・無制限。無料ユーザーが共有する結果カードや動画には
+/// 計測・履歴の保存・共有はすべて無料・無制限。無料ユーザーが共有する結果カードには
 /// 「体験版」の透かしが入り、買い切り解放で透かしが消える（`showsWatermark`）。
 @Observable
 @MainActor

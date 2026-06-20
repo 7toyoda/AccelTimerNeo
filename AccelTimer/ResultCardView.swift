@@ -10,25 +10,13 @@ struct ResultCardView: View {
     /// 表示単位（km/h / mph）。
     var unit: SpeedUnit = .kmh
 
-    /// 単位ごとのスプリット時刻。km/h は保存値、mph はタイムラインから補間。
+    /// 単位ごとのスプリット時刻。mph は計測時に保存した高精度 split を優先する。
     private var splitValues: [Double?] {
-        switch unit {
-        case .kmh:
-            return [record.split40 > 0 ? record.split40 : nil,
-                    record.split60 > 0 ? record.split60 : nil,
-                    record.split80 > 0 ? record.split80 : nil,
-                    record.isComplete ? record.totalTime : nil]
-        case .mph:
-            let tl = record.speedTimeline
-            return unit.milestonesKmh.map { SpeedUnit.time(toReachKmh: $0, in: tl) }
-        }
+        (0..<4).map { record.splitTime(unit: unit, band: $0) }
     }
     /// ヘッドライン時刻（km/h=0-100、mph=0-60mph）。達成していなければ nil。
     private var headlineValue: Double? {
-        switch unit {
-        case .kmh: return record.isComplete ? record.totalTime : nil
-        case .mph: return SpeedUnit.time(toReachKmh: unit.headlineKmh, in: record.speedTimeline)
-        }
+        record.splitTime(unit: unit, band: 3)
     }
 
     /// 共有に使う固定サイズ（縦長・SNS 映え）。レンダラ側で 3 倍解像度に拡大する。

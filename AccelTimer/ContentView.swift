@@ -122,11 +122,10 @@ struct MeasureView: View {
         return engine.displayElapsedTime
     }
 
-    /// mph マイルストーンのベストを保存済みタイムラインから再計算する（records 変更時のみ）。
+    /// mph マイルストーンのベストを保存済み高精度 split から再計算する（records 変更時のみ）。
     private func recomputeMphBests() {
-        let targets = SpeedUnit.mph.milestonesKmh
-        mphBests = targets.map { target in
-            records.compactMap { SpeedUnit.time(toReachKmh: target, in: $0.speedTimeline) }.min()
+        mphBests = (0..<4).map { band in
+            records.compactMap { $0.splitTime(unit: .mph, band: band) }.min()
         }
         engine.mphBestTimes = mphBests   // NEW RECORD 読み上げ判定に使う
     }
@@ -138,9 +137,10 @@ struct MeasureView: View {
     private func attemptSaveAndArm() {
         if store.canSaveAnother(currentCount: records.count) {
             let prevBest = best100
+            let prevMphBest = mphBests[3]
             let prevSaved = engine.lastSavedRecord
             engine.saveAndArm(context: modelContext)
-            presentCelebrationIfNewBest(prevBest: prevBest, prevSaved: prevSaved)
+            presentCelebrationIfNewBest(prevBest: prevBest, prevMphBest: prevMphBest, prevSaved: prevSaved)
         } else {
             // 保存上限：レコードを保存しない。arm() の finished→armed 遷移で動画だけ
             // 保存され、対応レコードが無く孤立／別計測へ誤ひも付けされるのを防ぐため、
@@ -155,10 +155,11 @@ struct MeasureView: View {
     private func attemptSaveResult() {
         if store.canSaveAnother(currentCount: records.count) {
             let prevBest = best100
+            let prevMphBest = mphBests[3]
             let prevSaved = engine.lastSavedRecord
             stopVideoRecordingIfNeeded()              // レコードと対で動画を保存
             engine.saveResult(context: modelContext)
-            presentCelebrationIfNewBest(prevBest: prevBest, prevSaved: prevSaved)
+            presentCelebrationIfNewBest(prevBest: prevBest, prevMphBest: prevMphBest, prevSaved: prevSaved)
         } else {
             discardCurrentVideo()                      // 上限：動画も保存しない
             presentFreeLimitPaywall()
@@ -181,11 +182,20 @@ struct MeasureView: View {
         showPaywall = true
     }
 
-    /// 直前の保存が自己ベスト更新（完走 かつ 旧ベストより速い）なら祝福シートを出す。
+    /// 直前の保存が表示単位の自己ベスト更新なら祝福シートを出す。
     /// `prevSaved` と異なる新レコードが保存された場合のみ対象（未保存ランの取り違え防止）。
-    private func presentCelebrationIfNewBest(prevBest: Double?, prevSaved: MeasurementRecord?) {
+    private func presentCelebrationIfNewBest(prevBest: Double?, prevMphBest: Double?,
+                                             prevSaved: MeasurementRecord?) {
         guard let saved = engine.lastSavedRecord, saved !== prevSaved, saved.isComplete else { return }
-        if prevBest == nil || saved.totalTime < prevBest! {
+        let didImprove: Bool
+        switch unit {
+        case .kmh:
+            didImprove = prevBest == nil || saved.totalTime < prevBest!
+        case .mph:
+            guard let mph60 = saved.splitTime(unit: .mph, band: 3) else { return }
+            didImprove = prevMphBest == nil || mph60 < prevMphBest!
+        }
+        if didImprove {
             celebrationRecord = saved
         }
     }
@@ -987,11 +997,11 @@ struct MeasureView: View {
     private var gpsAccuracyLabel: String {
         let spd = engine.gpsSpeedAccuracy   // m/s
         guard spd >= 0 else { return String(localized: "GPS なし") }
-        let v = String(format: "%.1f", spd * 3.6)
-        if spd < 0.3  { return String(localized: "速度±\(v)km/h BEST") }
-        if spd < 1.0  { return String(localized: "速度±\(v)km/h GOOD") }
-        if spd < 2.0  { return String(localized: "速度±\(v)km/h FAIR") }
-        return String(localized: "速度±\(v)km/h POOR")
+        let v = String(format: "%.1f", unit.value(fromKmh: spd * 3.6))
+        if spd < 0.3  { return String(localized: "速度±\(v)\(unit.label) BEST") }
+        if spd < 1.0  { return String(localized: "速度±\(v)\(unit.label) GOOD") }
+        if spd < 2.0  { return String(localized: "速度±\(v)\(unit.label) FAIR") }
+        return String(localized: "速度±\(v)\(unit.label) POOR")
     }
 
     private var stateLabel: String {

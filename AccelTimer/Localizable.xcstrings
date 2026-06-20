@@ -3310,24 +3310,24 @@
         }
       }
     },
-    "走行動画も無制限に保存" : {
+    "クリーンな結果カードを共有" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Save unlimited driving videos"
+            "value" : "Share clean result cards"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "주행 동영상도 무제한 저장"
+            "value" : "깔끔한 결과 카드 공유"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "无限保存行车视频"
+            "value" : "分享干净的成绩卡"
           }
         }
       }

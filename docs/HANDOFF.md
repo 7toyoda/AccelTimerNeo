@@ -5,7 +5,7 @@
 **変更前に該当箇所を読み、ここに書かれた意図的な設計を壊さないこと。** 記述と実
 コードが食い違う場合は実コードを正とし、本書を更新すること。
 
-最終更新時の状態: バージョン 0.1.30 系 / Swift 6 / SwiftUI / SwiftData / iOS 17+。
+最終更新時の状態: バージョン 0.1.42 系 / Swift 6 / SwiftUI / SwiftData / iOS 17+。
 リポジトリ: GitHub `toy0da/accel-timer`（main ブランチ運用）。
 
 ---
@@ -17,8 +17,10 @@
 
 - GPS（CoreLocation Doppler, 実機では概ね **1Hz**）＝速度の絶対基準。
 - CoreMotion（CMDeviceMotion, **100Hz**）＝GPS 間の補間・発進検出用リングバッファ。
-- スプリット時刻（0→40/60/80/100 km/h）は **線形補間**でミリ秒精度算出。純粋関数
-  `TimerEngine.interpolatedCrossTime` に抽出済み（`AccelTimerTests` でテスト）。
+- スプリット時刻（0→40/60/80/100 km/h、mph表示時は0→15/30/45/60 mph）は
+  **線形補間**でミリ秒精度算出。純粋関数 `TimerEngine.interpolatedCrossTime` に抽出済み
+  （`AccelTimerTests` でテスト）。mphスプリットは表示用に並行記録し、完了判定は従来通り
+  100 km/h到達。
 - GPS 精度判定は **Doppler 速度精度 `speedAccuracy`(m/s)**。青<0.3 / 緑<1.0 /
   黄<2.0 / 赤≥2.0。赤＝UI「GPS確認中」。hAcc が良くても sAcc が悪い場合があるため
   速度精度を採用。
@@ -73,16 +75,14 @@
   `MeasurementRecord.isReferenceOnly`（`finishSpeedAccuracy >= 1.0 || unstableStart`）で
   「参考値」バッジ表示。手持ち計測を**禁止せず**、品質を示す方針。
 
-## 7. 課金（ハイブリッドモデル・v0.1.27）
+## 7. 課金（透かし除去モデル・v0.1.37）
 
-**計測は常に無料・無制限。無料ユーザーは履歴を `StoreManager.freeHistoryLimit`(=5)
-件まで保存でき、6件目の保存時にペイウォール提示**（計測は止めない）。
-- 旧「無料N回で計測自体をブロック」型は廃止。`StoreManager` は `isPurchased` 中心＋
-  `canSaveAnother(currentCount:)` / `freeSlotsRemaining(currentCount:)`。判定は実際の
-  `records.count`（SwiftData）ベース。
-- 保存は ContentView の `attemptSaveAndArm` / `attemptSaveResult` で件数判定。上限なら
-  `presentFreeLimitPaywall`（`freeLimitNoticeShown` で同一上限中は1回だけ提示、空き/
-  購入でリセット）。計測は常に arm。
+**計測・履歴保存・共有は常に無料・無制限。無料ユーザーが共有する結果カードには
+「体験版」透かしを入れ、買い切りで透かしを除去する**。
+- 旧「履歴5件まで無料→超過でペイウォール」型は廃止。`StoreManager.canSaveAnother`
+  は保存経路互換のため残しているが常に `true`。保存を課金で止めない。
+- 課金判定は `StoreManager.isPurchased` / `showsWatermark` が中心。`ResultCardView` /
+  `CelebrationView` / `MeasurementDetailView` のカード共有で透かし有無を分岐する。
 - 買い切り（非消費型 IAP `com.acceltimer.app.AccelTimer.unlock`、¥800、StoreKit2）。
   ローカルテストは `AccelTimer.storekit` をスキームが参照。
 - `TrialKeychain.swift` は現在未使用（将来の不正防止用に残置）。
@@ -113,7 +113,10 @@
 
 - **多言語**: String Catalog（`Localizable.xcstrings` ソース日本語＋en/ko/zh-Hans、
   `InfoPlist.xcstrings`）。`String(localized:)` の補間は %@ / %lld でキーが変わる点に注意。
-  単位 km/h は維持。
+  表示単位は `SpeedUnit` で km/h / mph を切り替える。中核計測・保存基準は km/h のまま。
+- **mph表示**: ライブ画面では0→15/30/45/60 mphを `TimerEngine.mphSplits` で並行追跡。
+  `MeasurementRecord` に `mphSplit15/30/45/60` として保存し、履歴・詳細・共有カードは
+  この高精度値を優先する。旧レコードのみ `speedTimeline` 補間へフォールバック。
 - **国コード記録**: `CountryGeocoder` が逆ジオコーディングで後追いバックフィル
   （将来の国別ランキング下準備）。
 - **動画プリロール**: READY から録画開始し、保存時に発進点へトリミング（巻き取り）。
@@ -138,7 +141,13 @@ TestAction に含まれる。新規ロジックは可能な限り純粋関数に
   個人アカウントは販売者名に本名が公開される点に留意。
 - GitHub PAT は 2026-09-13 失効予定。push 不可になったら再発行しキーチェーンに再保存。
 
-## 13. 実機ログの解析運用
+## 13. バージョン管理
+
+`MARKETING_VERSION` / `CURRENT_PROJECT_VERSION` は `Config/Version.xcconfig` に集約済み。
+コード変更を伴う修正は `MARKETING_VERSION` のパッチを +1 する。App Store / TestFlight
+提出前などビルド番号更新が必要な時は `Scripts/set_build_number.sh` を実行する。
+
+## 14. 実機ログの解析運用
 
 ユーザーは実走後 `Documents` 配下の `debug/debug.csv`（常時ログ：wall_time, state,
 gps_mps, gps_acc_mps, h_acc_m, speed_kmh, peak_kmh, conf_stopped, dev_steady, event）と

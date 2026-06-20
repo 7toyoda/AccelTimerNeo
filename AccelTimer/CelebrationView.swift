@@ -28,7 +28,7 @@ struct CelebrationView: View {
                         Text("🎉 新記録！")
                             .font(.system(size: 30, weight: .heavy, design: .rounded))
                             .foregroundStyle(.white)
-                        Text("0 → 100 km/h を更新しました")
+                        Text("\(unit.headlineLabel) を更新しました")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
@@ -96,7 +96,7 @@ struct CelebrationView: View {
                     .background(.white.opacity(0.12), in: RoundedRectangle(cornerRadius: 14))
                     .overlay(RoundedRectangle(cornerRadius: 14).stroke(.white.opacity(0.2), lineWidth: 1))
             }
-            Text("買い切りで「体験版」の透かしが消え、クリーンなカード・動画を共有できます")
+            Text("買い切りで「体験版」の透かしが消え、クリーンな結果カードを共有できます")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)

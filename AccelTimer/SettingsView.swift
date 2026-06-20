@@ -27,7 +27,7 @@ struct SettingsView: View {
                             Label("購入済み（全機能解放）", systemImage: "checkmark.seal.fill")
                                 .foregroundStyle(.green)
                         } else {
-                            Text("計測・履歴の保存・共有はすべて無料です。共有する結果カードや動画には「体験版」の透かしが入ります。")
+                            Text("計測・履歴の保存・共有はすべて無料です。共有する結果カードには「体験版」の透かしが入ります。")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                             // いつでも購入して透かしを消し、全機能を解放できる

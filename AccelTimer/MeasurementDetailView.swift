@@ -11,18 +11,9 @@ struct MeasurementDetailView: View {
     @AppStorage("speedUnit") private var speedUnitRaw: String = SpeedUnit.defaultForLocale.rawValue
     private var unit: SpeedUnit { SpeedUnit(rawValue: speedUnitRaw) ?? .kmh }
 
-    /// 単位ごとのスプリット時刻。km/h は保存値、mph はタイムラインから補間。
+    /// 単位ごとのスプリット時刻。mph は計測時に保存した高精度 split を優先する。
     private var detailSplitValues: [Double?] {
-        switch unit {
-        case .kmh:
-            return [record.split40 > 0 ? record.split40 : nil,
-                    record.split60 > 0 ? record.split60 : nil,
-                    record.split80 > 0 ? record.split80 : nil,
-                    record.isComplete ? record.totalTime : nil]
-        case .mph:
-            let tl = record.speedTimeline
-            return unit.milestonesKmh.map { SpeedUnit.time(toReachKmh: $0, in: tl) }
-        }
+        (0..<4).map { record.splitTime(unit: unit, band: $0) }
     }
     @State private var videoPlayer: AVPlayer? = nil
     @State private var isFullScreen: Bool = false
@@ -277,7 +268,7 @@ struct MeasurementDetailView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 Spacer()
-                Text(record.isComplete ? String(localized: "S = スタート  G = 100km/h到達") : String(localized: "S = スタート  G = 停車地点"))
+                Text(record.isComplete ? String(localized: "S = スタート  G = 計測終了地点") : String(localized: "S = スタート  G = 停車地点"))
                     .font(.system(size: 9))
                     .foregroundStyle(.secondary)
             }
@@ -294,7 +285,7 @@ struct MeasurementDetailView: View {
                             .foregroundStyle(.white)
                     }
                 }
-                Annotation(record.isComplete ? String(localized: "100km/h到達") : String(localized: "停車地点"), coordinate: endCoord, anchor: .bottom) {
+                Annotation(record.isComplete ? String(localized: "計測終了地点") : String(localized: "停車地点"), coordinate: endCoord, anchor: .bottom) {
                     ZStack {
                         Circle()
                             .fill(Color.red)
@@ -321,7 +312,8 @@ struct MeasurementDetailView: View {
                 warningRow(String(localized: "発進時に端末が安定しておらず、スタート点の検出精度が低下しています（手持ち撮影の可能性）。端末を車体に固定すると改善します。"))
             }
             if record.finishSpeedAccuracy >= 1.0 {
-                warningRow(String(localized: "100km/h到達付近のGPS速度精度が±\(String(format: "%.1f", record.finishSpeedAccuracy * 3.6))km/hに低下しています。"))
+                let v = String(format: "%.1f", unit.value(fromKmh: record.finishSpeedAccuracy * 3.6))
+                warningRow(String(localized: "計測終了付近のGPS速度精度が±\(v)\(unit.label)に低下しています。"))
             }
             Text("このタイムは参考値としてご覧ください。")
                 .font(.caption.bold())
@@ -376,13 +368,13 @@ struct MeasurementDetailView: View {
                     ForEach(timeline.indices, id: \.self) { i in
                         let s = timeline[i]
                         AreaMark(x: .value("時間", s.time),
-                                 y: .value("速度", s.speed))
+                                 y: .value("速度", unit.value(fromKmh: s.speed)))
                             .foregroundStyle(
                                 .linearGradient(
                                     colors: [.cyan.opacity(0.45), .cyan.opacity(0.05)],
                                     startPoint: .top, endPoint: .bottom))
                         LineMark(x: .value("時間", s.time),
-                                 y: .value("速度", s.speed))
+                                 y: .value("速度", unit.value(fromKmh: s.speed)))
                             .foregroundStyle(.cyan)
                             .lineStyle(StrokeStyle(lineWidth: 2))
                     }
@@ -410,7 +402,7 @@ struct MeasurementDetailView: View {
                     }
                 }
                 .chartYAxis {
-                    AxisMarks(values: [0, 40, 60, 80, 100]) { v in
+                    AxisMarks(values: yAxisMarks) { v in
                         AxisGridLine().foregroundStyle(Color.white.opacity(0.1))
                         AxisValueLabel {
                             if let d = v.as(Double.self) {
@@ -421,7 +413,7 @@ struct MeasurementDetailView: View {
                         }
                     }
                 }
-                .chartYScale(domain: 0...(max(110, (timeline.map(\.speed).max() ?? 110) * 1.1)))
+                .chartYScale(domain: 0...chartMaxSpeed)
                 .chartPlotStyle { plot in
                     plot.background(Color.white.opacity(0.03))
                 }
@@ -434,12 +426,20 @@ struct MeasurementDetailView: View {
     }
 
     private var splitMarkers: [(label: String, time: Double)] {
-        var m: [(label: String, time: Double)] = []
-        if record.split40 > 0 { m.append(("40",  record.split40)) }
-        if record.split60 > 0 { m.append(("60",  record.split60)) }
-        if record.split80 > 0 { m.append(("80",  record.split80)) }
-        if record.isComplete  { m.append(("100", record.totalTime)) }
-        return m
+        (0..<4).compactMap { band in
+            guard let time = record.splitTime(unit: unit, band: band) else { return nil }
+            return (unit.milestoneShortLabels[band], time)
+        }
+    }
+
+    private var yAxisMarks: [Double] {
+        [0] + unit.milestonesKmh.map { unit.value(fromKmh: $0) }
+    }
+
+    private var chartMaxSpeed: Double {
+        let timelineMax = record.speedTimeline.map { unit.value(fromKmh: $0.speed) }.max() ?? 0
+        let baseline = unit == .kmh ? 110.0 : 70.0
+        return max(baseline, timelineMax * 1.1)
     }
 
     // MARK: - Acceleration (速度タイムラインから導出)
@@ -585,7 +585,7 @@ struct MeasurementDetailView: View {
     // MARK: - Stats
 
     private var statsSection: some View {
-        // 速度精度はヘッダーのGPSインジケーター（速度±X km/h BEST/…）で表示済みのため、
+        // 速度精度はヘッダーのGPSインジケーター（速度±X BEST/…）で表示済みのため、
         // ここでは重複を避け最高速度のみを表示する
         HStack(spacing: 0) {
             StatItem(label: String(localized: "最高速度"),
@@ -651,11 +651,11 @@ struct MeasurementDetailView: View {
     private func gpsLabel(_ record: MeasurementRecord) -> String {
         let spd = record.gpsSpeedAccuracy
         if spd >= 0 {
-            let v = String(format: "%.1f", spd * 3.6)
-            if spd < 0.3  { return String(localized: "速度±\(v)km/h BEST") }
-            if spd < 1.0  { return String(localized: "速度±\(v)km/h GOOD") }
-            if spd < 2.0  { return String(localized: "速度±\(v)km/h FAIR") }
-            return String(localized: "速度±\(v)km/h POOR")
+            let v = String(format: "%.1f", unit.value(fromKmh: spd * 3.6))
+            if spd < 0.3  { return String(localized: "速度±\(v)\(unit.label) BEST") }
+            if spd < 1.0  { return String(localized: "速度±\(v)\(unit.label) GOOD") }
+            if spd < 2.0  { return String(localized: "速度±\(v)\(unit.label) FAIR") }
+            return String(localized: "速度±\(v)\(unit.label) POOR")
         }
         let acc = record.gpsAccuracy
         guard acc >= 0 else { return String(localized: "GPS不明") }

@@ -6,23 +6,6 @@ enum HistorySortOrder: String, CaseIterable {
     case date = "日付順"
 }
 
-extension MeasurementRecord {
-    /// 指定単位・帯(0..3)のスプリット時刻。km/h は保存値、mph はタイムライン補間。
-    func splitTime(unit: SpeedUnit, band: Int) -> Double? {
-        switch unit {
-        case .kmh:
-            switch band {
-            case 0: return split40 > 0 ? split40 : nil
-            case 1: return split60 > 0 ? split60 : nil
-            case 2: return split80 > 0 ? split80 : nil
-            default: return isComplete ? totalTime : nil
-            }
-        case .mph:
-            return SpeedUnit.time(toReachKmh: unit.milestonesKmh[band], in: speedTimeline)
-        }
-    }
-}
-
 struct HistoryView: View {
     @Query(sort: \MeasurementRecord.date, order: .reverse)
     private var records: [MeasurementRecord]
@@ -292,11 +275,11 @@ struct HistoryRow: View {
     private func gpsLabel(_ record: MeasurementRecord) -> String {
         let spd = record.gpsSpeedAccuracy
         if spd >= 0 {
-            let v = String(format: "%.1f", spd * 3.6)
-            if spd < 0.3  { return String(localized: "速度±\(v)km/h BEST") }
-            if spd < 1.0  { return String(localized: "速度±\(v)km/h GOOD") }
-            if spd < 2.0  { return String(localized: "速度±\(v)km/h FAIR") }
-            return String(localized: "速度±\(v)km/h POOR")
+            let v = String(format: "%.1f", unit.value(fromKmh: spd * 3.6))
+            if spd < 0.3  { return String(localized: "速度±\(v)\(unit.label) BEST") }
+            if spd < 1.0  { return String(localized: "速度±\(v)\(unit.label) GOOD") }
+            if spd < 2.0  { return String(localized: "速度±\(v)\(unit.label) FAIR") }
+            return String(localized: "速度±\(v)\(unit.label) POOR")
         }
         let acc = record.gpsAccuracy
         guard acc >= 0 else { return String(localized: "GPS不明") }
