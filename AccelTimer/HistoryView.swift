@@ -137,7 +137,8 @@ struct HistoryView: View {
             }
             // 日付順・タイム順のどちらにも出なくなったら動画・ログごと完全削除
             let visibleInDate = !record.hiddenFromDate
-            let visibleInTime = !record.hiddenFromTime && record.split40 > 0  // 0→40到達＝タイム順に出る
+            let visibleInTime = !record.hiddenFromTime
+                && (0..<4).contains { record.splitTime(unit: unit, band: $0) != nil }
             if !visibleInDate && !visibleInTime {
                 record.deleteVideoFile()
                 record.deleteLogFile()
