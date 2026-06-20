@@ -2451,6 +2451,7 @@
       }
     },
     "端末を固定してください" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {

@@ -21,15 +21,25 @@ struct ContentView: View {
         return nil
     }
 
+    private enum Tab: Hashable { case measure, history, settings }
+    @State private var selectedTab: Tab = .measure
+
     var body: some View {
-        TabView {
+        // システム標準のタブバーは（iOS 26 では中央寄せで幅が狭いため）隠し、
+        // 画面幅いっぱいに広がるカスタムタブバーを下部に重ねる。TabView 自体は維持して
+        // タブ切替でも各タブの @State（MeasureView の engine 等）を保持する。
+        TabView(selection: $selectedTab) {
             MeasureView()
-                .tabItem { Label("計測", systemImage: "gauge.high") }
+                .tag(Tab.measure)
+                .toolbar(.hidden, for: .tabBar)
             HistoryView()
-                .tabItem { Label("履歴", systemImage: "clock.arrow.circlepath") }
+                .tag(Tab.history)
+                .toolbar(.hidden, for: .tabBar)
             SettingsView()
-                .tabItem { Label("設定", systemImage: "gearshape") }
+                .tag(Tab.settings)
+                .toolbar(.hidden, for: .tabBar)
         }
+        .safeAreaInset(edge: .bottom, spacing: 0) { customTabBar }
         .preferredColorScheme(.dark)
         .environment(store)
         // 免責 → 事前アナウンスの順に全画面表示（完了するまで閉じられない）。
@@ -46,6 +56,46 @@ struct ContentView: View {
                 EmptyView()
             }
         }
+    }
+
+    // MARK: - カスタムタブバー（画面幅いっぱい・3等分）
+
+    private var customTabBar: some View {
+        HStack(spacing: 0) {
+            tabButton(.measure,  title: "計測", icon: "gauge.high")
+            tabButton(.history,  title: "履歴", icon: "clock.arrow.circlepath")
+            tabButton(.settings, title: "設定", icon: "gearshape")
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 10)
+        .padding(.bottom, 6)
+        .background(
+            Color(white: 0.07)
+                .overlay(alignment: .top) {
+                    Rectangle().fill(Color.white.opacity(0.10)).frame(height: 0.5)
+                }
+                .ignoresSafeArea(edges: .bottom)
+        )
+    }
+
+    private func tabButton(_ tab: Tab, title: String, icon: String) -> some View {
+        let selected = (selectedTab == tab)
+        return Button {
+            selectedTab = tab
+        } label: {
+            VStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.system(size: 24, weight: .semibold))
+                Text(title)
+                    .font(.system(size: 11, weight: .semibold))
+            }
+            // 各ボタンを画面幅の 1/3 に広げ、タップ領域を全面に
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 2)
+            .foregroundStyle(selected ? Color.white : Color.gray)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 }
 
