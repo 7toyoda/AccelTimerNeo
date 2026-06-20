@@ -102,6 +102,33 @@ struct MeasureView: View {
     @State private var freeLimitNoticeShown = false
     // 新記録（自己ベスト更新）を出したときに祝福シートで表示するレコード
     @State private var celebrationRecord: MeasurementRecord?
+    // 表示単位（km/h / mph）。計測の中核は常に km/h、表示とマイルストーンのみ切替。
+    @AppStorage("speedUnit") private var speedUnitRaw: String = SpeedUnit.defaultForLocale.rawValue
+    // mph マイルストーンのベストタイム（records 変更時に再計算してキャッシュ）
+    @State private var mphBests: [Double?] = [nil, nil, nil, nil]
+
+    private var unit: SpeedUnit { SpeedUnit(rawValue: speedUnitRaw) ?? .kmh }
+    private var displayedSplits: [Double?] { unit == .kmh ? engine.splits : engine.mphSplits }
+    private var displayedBests: [Double?] { unit == .kmh ? bests : mphBests }
+    private var displayedSplitLabels: [String] { unit.milestoneLabels }
+
+    /// ヘッドラインの経過時間。mph モードでは 60mph 到達でクロックを固定（100km/h まで内部継続中も
+    /// 表示は 0-60mph で止め、完了後に時刻が巻き戻る違和感を防ぐ）。
+    private var headlineElapsed: Double {
+        if unit == .mph, let t = engine.mphSplits[3],
+           engine.state == .running || engine.state == .finished {
+            return t
+        }
+        return engine.displayElapsedTime
+    }
+
+    /// mph マイルストーンのベストを保存済みタイムラインから再計算する（records 変更時のみ）。
+    private func recomputeMphBests() {
+        let targets = SpeedUnit.mph.milestonesKmh
+        mphBests = targets.map { target in
+            records.compactMap { SpeedUnit.time(toReachKmh: target, in: $0.speedTimeline) }.min()
+        }
+    }
 
     private static let splitLabels = ["0→40", "0→60", "0→80", "0→100"]
 
@@ -283,6 +310,7 @@ struct MeasureView: View {
             isVisible = true
             UIApplication.shared.isIdleTimerDisabled = true
             engine.bestTimes = bests
+            recomputeMphBests()
             // 計測は常に無料・無制限。idle なら待機開始（オンボーディング完了後のみ）。
             if engine.state == .idle {
                 if onboardingDone { engine.arm() }
@@ -303,6 +331,7 @@ struct MeasureView: View {
         }
         .onChange(of: records) { _, _ in
             engine.bestTimes = bests
+            recomputeMphBests()
             // 履歴削除などで空きができたら、上限ペイウォールの再提示を許可する
             if store.canSaveAnother(currentCount: records.count) { freeLimitNoticeShown = false }
             applyPendingVideoFileName()
@@ -456,12 +485,12 @@ struct MeasureView: View {
                 // 右ペイン：スプリット
                 Grid(horizontalSpacing: 8, verticalSpacing: 8) {
                     GridRow {
-                        SplitCell(label: Self.splitLabels[0], time: engine.splits[0], best: bests[0], compact: true)
-                        SplitCell(label: Self.splitLabels[1], time: engine.splits[1], best: bests[1], compact: true)
+                        SplitCell(label: displayedSplitLabels[0], time: displayedSplits[0], best: displayedBests[0], compact: true)
+                        SplitCell(label: displayedSplitLabels[1], time: displayedSplits[1], best: displayedBests[1], compact: true)
                     }
                     GridRow {
-                        SplitCell(label: Self.splitLabels[2], time: engine.splits[2], best: bests[2], compact: true)
-                        SplitCell(label: Self.splitLabels[3], time: engine.splits[3], best: bests[3], compact: true)
+                        SplitCell(label: displayedSplitLabels[2], time: displayedSplits[2], best: displayedBests[2], compact: true)
+                        SplitCell(label: displayedSplitLabels[3], time: displayedSplits[3], best: displayedBests[3], compact: true)
                     }
                 }
                 .padding(.horizontal, 12)
@@ -511,7 +540,7 @@ struct MeasureView: View {
         if gpsIsRed && (engine.state == .idle || engine.state == .armed) {
             return "-.-"
         }
-        return String(format: "%.1f", engine.displaySpeedKmh)
+        return String(format: "%.1f", unit.value(fromKmh: engine.displaySpeedKmh))
     }
 
     // 計測中だけ表示する、画面の淵を流れるエッジグロー。
@@ -553,7 +582,7 @@ struct MeasureView: View {
 
     private var speedDisplay: some View {
         HStack(alignment: .firstTextBaseline, spacing: 6) {
-            Text("km/h")
+            Text(unit.label)
                 .font(.title2)
                 .hidden()
             Text(speedText)
@@ -567,7 +596,7 @@ struct MeasureView: View {
                 // 待機(armed/idle)はGPS(1Hz)を即時反映（1秒トゥイーンは見難いとの指摘で廃止）
                 .animation(nil, value: engine.displaySpeedKmh)
                 .animation(.easeOut(duration: 0.3), value: isRunning)
-            Text("km/h")
+            Text(unit.label)
                 .font(.title2)
                 .foregroundStyle(.secondary)
         }
@@ -576,7 +605,7 @@ struct MeasureView: View {
 
     private var speedDisplayLandscape: some View {
         HStack(alignment: .firstTextBaseline, spacing: 4) {
-            Text("km/h")
+            Text(unit.label)
                 .font(.title3)
                 .hidden()
             Text(speedText)
@@ -589,7 +618,7 @@ struct MeasureView: View {
                 // 待機(armed/idle)はGPS(1Hz)を即時反映（1秒トゥイーンは見難いとの指摘で廃止）
                 .animation(nil, value: engine.displaySpeedKmh)
                 .animation(.easeOut(duration: 0.3), value: isRunning)
-            Text("km/h")
+            Text(unit.label)
                 .font(.title3)
                 .foregroundStyle(.secondary)
         }
@@ -598,7 +627,7 @@ struct MeasureView: View {
 
     private var timeDisplay: some View {
         HStack(alignment: .firstTextBaseline, spacing: 4) {
-            Text(formatTime(engine.displayElapsedTime))   // 画面用は~15Hz間引き（オーバーレイはelapsedTime=100Hz）
+            Text(formatTime(headlineElapsed))   // 画面用は~15Hz間引き（mphは0-60mphで固定）
                 .font(.system(size: isShortScreen ? (showRunningVisuals ? 46 : 42) : (showRunningVisuals ? 58 : 52),
                               weight: showRunningVisuals ? .bold : .medium, design: .monospaced))
                 .foregroundStyle(showRunningVisuals ? Color.yellow : .white)
@@ -616,12 +645,12 @@ struct MeasureView: View {
     private var splitGrid: some View {
         Grid(horizontalSpacing: 10, verticalSpacing: 10) {
             GridRow {
-                SplitCell(label: Self.splitLabels[0], time: engine.splits[0], best: bests[0], compact: isShortScreen)
-                SplitCell(label: Self.splitLabels[1], time: engine.splits[1], best: bests[1], compact: isShortScreen)
+                SplitCell(label: displayedSplitLabels[0], time: displayedSplits[0], best: displayedBests[0], compact: isShortScreen)
+                SplitCell(label: displayedSplitLabels[1], time: displayedSplits[1], best: displayedBests[1], compact: isShortScreen)
             }
             GridRow {
-                SplitCell(label: Self.splitLabels[2], time: engine.splits[2], best: bests[2], compact: isShortScreen)
-                SplitCell(label: Self.splitLabels[3], time: engine.splits[3], best: bests[3], compact: isShortScreen)
+                SplitCell(label: displayedSplitLabels[2], time: displayedSplits[2], best: displayedBests[2], compact: isShortScreen)
+                SplitCell(label: displayedSplitLabels[3], time: displayedSplits[3], best: displayedBests[3], compact: isShortScreen)
             }
         }
     }

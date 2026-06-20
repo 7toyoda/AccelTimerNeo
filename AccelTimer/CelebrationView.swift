@@ -13,6 +13,8 @@ struct CelebrationView: View {
 
     @State private var shareURL: URL?
     @State private var glow = false
+    @AppStorage("speedUnit") private var speedUnitRaw: String = SpeedUnit.defaultForLocale.rawValue
+    private var unit: SpeedUnit { SpeedUnit(rawValue: speedUnitRaw) ?? .kmh }
 
     var body: some View {
         ZStack {
@@ -31,7 +33,7 @@ struct CelebrationView: View {
                             .foregroundStyle(.secondary)
                     }
                     // トロフィーカードのプレビュー（無料は透かし付き）
-                    ResultCardView(record: record, showsWatermark: store.showsWatermark)
+                    ResultCardView(record: record, showsWatermark: store.showsWatermark, unit: unit)
                         .shadow(color: .yellow.opacity(glow ? 0.5 : 0.2), radius: glow ? 24 : 10)
                     shareButton
                     if store.showsWatermark {
@@ -46,7 +48,8 @@ struct CelebrationView: View {
         .preferredColorScheme(.dark)
         .onAppear {
             shareURL = ResultCardRenderer.renderURL(record: record,
-                                                    showsWatermark: store.showsWatermark)
+                                                    showsWatermark: store.showsWatermark,
+                                                    unit: unit)
             withAnimation(.easeInOut(duration: 1.4).repeatForever(autoreverses: true)) { glow = true }
         }
     }

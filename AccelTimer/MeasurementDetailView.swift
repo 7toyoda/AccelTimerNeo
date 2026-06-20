@@ -8,6 +8,8 @@ struct MeasurementDetailView: View {
     let record: MeasurementRecord
     let isBest: Bool
     @Environment(StoreManager.self) private var store
+    @AppStorage("speedUnit") private var speedUnitRaw: String = SpeedUnit.defaultForLocale.rawValue
+    private var unit: SpeedUnit { SpeedUnit(rawValue: speedUnitRaw) ?? .kmh }
     @State private var videoPlayer: AVPlayer? = nil
     @State private var isFullScreen: Bool = false
     /// 共有用に書き出した結果カード画像（無料は透かし付き）。
@@ -59,6 +61,7 @@ struct MeasurementDetailView: View {
                 // 購入で透かしが消えるため、カードを再生成する
                 renderShareCard()
             }
+            .onChange(of: speedUnitRaw) { _, _ in renderShareCard() }
             .onDisappear {
                 // 画面を離れたら再生を停止して解放（戻った後に音声が鳴り続けるのを防ぐ）
                 videoPlayer?.pause()
@@ -75,7 +78,8 @@ struct MeasurementDetailView: View {
     /// 結果カードを共有用の画像に書き出して `cardShareURL` に格納する。
     private func renderShareCard() {
         cardShareURL = ResultCardRenderer.renderURL(record: record,
-                                                    showsWatermark: store.showsWatermark)
+                                                    showsWatermark: store.showsWatermark,
+                                                    unit: unit)
     }
 
     /// SNS 共有用トロフィーカードのボタン。無料は透かし付き、買い切りで透かしが消える。

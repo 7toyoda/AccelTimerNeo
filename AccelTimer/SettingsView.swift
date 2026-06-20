@@ -8,6 +8,7 @@ struct SettingsView: View {
     @AppStorage("speakEnabled") private var speakEnabled: Bool = true
     @AppStorage("videoRecordingEnabled") private var videoEnabled: Bool = false
     @AppStorage("videoAudioEnabled") private var audioEnabled: Bool = true
+    @AppStorage("speedUnit") private var speedUnitRaw: String = SpeedUnit.defaultForLocale.rawValue
     @Environment(StoreManager.self) private var store
     @Environment(\.openURL) private var openURL
     @State private var restoring = false
@@ -43,6 +44,18 @@ struct SettingsView: View {
                             }
                             .disabled(restoring)
                         }
+                    }
+                    Section("表示単位") {
+                        Picker("速度の単位", selection: $speedUnitRaw) {
+                            Text("km/h").tag(SpeedUnit.kmh.rawValue)
+                            Text("mph").tag(SpeedUnit.mph.rawValue)
+                        }
+                        .pickerStyle(.segmented)
+                        Text(speedUnitRaw == SpeedUnit.mph.rawValue
+                             ? "速度・スプリットを mph で表示します（主役は 0-60 mph）"
+                             : "速度・スプリットを km/h で表示します（主役は 0-100 km/h）")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
                     Section("計測完了後の動作") {
                         Toggle("停車で自動再計測", isOn: $autoReset)

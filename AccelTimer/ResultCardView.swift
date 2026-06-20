@@ -7,6 +7,29 @@ struct ResultCardView: View {
     let record: MeasurementRecord
     /// true なら「体験版」透かしを表示する（無料ユーザー）。
     let showsWatermark: Bool
+    /// 表示単位（km/h / mph）。
+    var unit: SpeedUnit = .kmh
+
+    /// 単位ごとのスプリット時刻。km/h は保存値、mph はタイムラインから補間。
+    private var splitValues: [Double?] {
+        switch unit {
+        case .kmh:
+            return [record.split40 > 0 ? record.split40 : nil,
+                    record.split60 > 0 ? record.split60 : nil,
+                    record.split80 > 0 ? record.split80 : nil,
+                    record.isComplete ? record.totalTime : nil]
+        case .mph:
+            let tl = record.speedTimeline
+            return unit.milestonesKmh.map { SpeedUnit.time(toReachKmh: $0, in: tl) }
+        }
+    }
+    /// ヘッドライン時刻（km/h=0-100、mph=0-60mph）。達成していなければ nil。
+    private var headlineValue: Double? {
+        switch unit {
+        case .kmh: return record.isComplete ? record.totalTime : nil
+        case .mph: return SpeedUnit.time(toReachKmh: unit.headlineKmh, in: record.speedTimeline)
+        }
+    }
 
     /// 共有に使う固定サイズ（縦長・SNS 映え）。レンダラ側で 3 倍解像度に拡大する。
     static let cardSize = CGSize(width: 340, height: 480)
@@ -75,12 +98,12 @@ struct ResultCardView: View {
 
     private var heroTime: some View {
         VStack(spacing: 2) {
-            Text("0 → 100 km/h")
+            Text(unit.headlineLabel)
                 .font(.system(size: 17, weight: .bold, design: .rounded))
                 .foregroundStyle(.white.opacity(0.85))
-            if record.isComplete {
+            if let headline = headlineValue {
                 HStack(alignment: .lastTextBaseline, spacing: 4) {
-                    Text(Self.timeString(record.totalTime))
+                    Text(Self.timeString(headline))
                         .font(.system(size: 78, weight: .heavy, design: .rounded))
                         .foregroundStyle(Self.goldGradient)
                     Text("秒")
@@ -92,7 +115,7 @@ struct ResultCardView: View {
                     Text("未達成")
                         .font(.system(size: 48, weight: .heavy, design: .rounded))
                         .foregroundStyle(.white.opacity(0.7))
-                    Text(String(format: "最高 %.1f km/h", record.maxSpeedKmh))
+                    Text("最高 \(Self.speedString(record.maxSpeedKmh, unit))")
                         .font(.system(size: 15, weight: .semibold, design: .rounded))
                         .foregroundStyle(.secondary)
                 }
@@ -101,14 +124,16 @@ struct ResultCardView: View {
     }
 
     private var splitRow: some View {
-        HStack(spacing: 0) {
-            splitCell("0→40", record.split40)
+        let labels = unit.milestoneLabels
+        let values = splitValues
+        return HStack(spacing: 0) {
+            splitCell(labels[0], values[0] ?? 0)
             divider
-            splitCell("0→60", record.split60)
+            splitCell(labels[1], values[1] ?? 0)
             divider
-            splitCell("0→80", record.split80)
+            splitCell(labels[2], values[2] ?? 0)
             divider
-            splitCell("0→100", record.isComplete ? record.totalTime : 0)
+            splitCell(labels[3], values[3] ?? 0)
         }
         .padding(.vertical, 12)
         .frame(maxWidth: .infinity)
@@ -136,7 +161,7 @@ struct ResultCardView: View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
                 if record.isComplete {
-                    Text(String(format: "最高速度 %.1f km/h", record.maxSpeedKmh))
+                    Text("最高速度 \(Self.speedString(record.maxSpeedKmh, unit))")
                         .font(.system(size: 12, weight: .semibold, design: .rounded))
                         .foregroundStyle(.white.opacity(0.8))
                 }
@@ -167,14 +192,20 @@ struct ResultCardView: View {
     static func timeString(_ t: Double) -> String {
         String(format: "%.2f", t)
     }
+
+    /// km/h 値を表示単位に変換して「123.4 mph」形式に整形する。
+    static func speedString(_ kmh: Double, _ unit: SpeedUnit) -> String {
+        String(format: "%.1f \(unit.label)", unit.value(fromKmh: kmh))
+    }
 }
 
 /// 結果カードを共有用の PNG ファイルに書き出すヘルパー。
 @MainActor
 enum ResultCardRenderer {
     /// カードを 3 倍解像度の PNG に書き出し、一時ファイルの URL を返す。失敗時は nil。
-    static func renderURL(record: MeasurementRecord, showsWatermark: Bool) -> URL? {
-        let card = ResultCardView(record: record, showsWatermark: showsWatermark)
+    static func renderURL(record: MeasurementRecord, showsWatermark: Bool,
+                          unit: SpeedUnit = .kmh) -> URL? {
+        let card = ResultCardView(record: record, showsWatermark: showsWatermark, unit: unit)
         let renderer = ImageRenderer(content: card)
         renderer.scale = 3
         guard let image = renderer.uiImage, let data = image.pngData() else { return nil }

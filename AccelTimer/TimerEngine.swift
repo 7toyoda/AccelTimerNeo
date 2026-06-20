@@ -29,6 +29,8 @@ final class TimerEngine {
     private var lastTimeDisplayTick: Double = 0
     private static let timeDisplayInterval = 0.066   // 画面のタイム更新間隔（秒）＝約15Hz
     var splits: [Double?] = [nil, nil, nil, nil]   // [40, 60, 80, 100] km/h
+    /// mph 表示用に並行追跡するスプリット [15, 30, 45, 60] mph。完了判定には影響しない。
+    var mphSplits: [Double?] = [nil, nil, nil, nil]
     var gpsHorizontalAccuracy: Double { location.horizontalAccuracy }
     var gpsSpeedAccuracy: Double { location.speedAccuracy }
     /// 位置情報の許可が拒否/制限されているか（計測に必須のため画面でガイド表示する）
@@ -181,6 +183,9 @@ final class TimerEngine {
     static let splitThresholdsMs: [Double] = [
         40 / 3.6, 60 / 3.6, 80 / 3.6, 100 / 3.6
     ]
+    /// mph マイルストーン [15, 30, 45, 60] mph を m/s に変換（すべて 100 km/h 手前）。
+    /// 完了判定には使わず、表示用に並行記録するだけ。
+    static let mphSplitThresholdsMs: [Double] = [15, 30, 45, 60].map { Double($0) * 1.609344 / 3.6 }
 
     /// 速度しきい値クロス時刻を線形補間で算出する純粋関数（テスト対象）。
     /// `prev.speed < threshold <= curr.speed` を満たす連続2サンプル間で、
@@ -811,6 +816,24 @@ final class TimerEngine {
 
             if i == 3 { finishMeasurement(); return }
         }
+        checkMphSplits(prev: prev, curr: curr, source: source)
+    }
+
+    /// mph マイルストーン [15,30,45,60] mph を並行記録する（完了・読み上げ・触覚なし）。
+    /// 中核の 100 km/h 完了判定には一切影響しない加算的な処理。
+    private func checkMphSplits(prev: (Double, Date), curr: (Double, Date), source: String = "KALMAN") {
+        guard let start = startTime else { return }
+        let (prevSpeed, prevTime) = prev
+        let (currSpeed, currTime) = curr
+        for (i, threshold) in Self.mphSplitThresholdsMs.enumerated() {
+            guard mphSplits[i] == nil, prevSpeed < threshold, currSpeed >= threshold else { continue }
+            // Kalman 偽検出ガード（km/h スプリットの 40/60/80 と同等）
+            if source != "GPS", lastGPSSpeedMs < threshold - 8.0 / 3.6 { continue }
+            let crossTime = Self.interpolatedCrossTime(
+                threshold: threshold, prev: (prevSpeed, prevTime), curr: (currSpeed, currTime))
+            guard crossTime >= start else { continue }
+            mphSplits[i] = crossTime.timeIntervalSince(start)
+        }
     }
 
     private func speak(_ text: String) {
@@ -872,6 +895,7 @@ final class TimerEngine {
         displayTimer?.invalidate()
         displayTimer = nil
         splits              = [nil, nil, nil, nil]
+        mphSplits           = [nil, nil, nil, nil]
         elapsedTime         = 0
         displayElapsedTime  = 0
         lastTimeDisplayTick = 0
