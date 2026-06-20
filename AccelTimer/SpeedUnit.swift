@@ -1,7 +1,7 @@
 import Foundation
 
 /// 速度の表示単位。計測の中核は常に km/h で行い、表示・スプリットのマイルストーンのみ
-/// この単位に従って切り替える。mph は米国市場向け（0-60mph が標準指標）。
+/// この単位に従って切り替える。mph は米国・英国系市場向け（0-60mph が標準指標）。
 enum SpeedUnit: String, CaseIterable, Identifiable {
     case kmh
     case mph
@@ -49,9 +49,14 @@ enum SpeedUnit: String, CaseIterable, Identifiable {
         self == .kmh ? "0 → 100 km/h" : "0 → 60 mph"
     }
 
-    /// 端末の地域からの既定単位（米国のみ mph）。
+    /// 端末の地域からの既定単位（米国・英国系は mph）。
     static var defaultForLocale: SpeedUnit {
-        Locale.current.measurementSystem == .us ? .mph : .kmh
+        switch Locale.current.measurementSystem {
+        case .us, .uk:
+            return .mph
+        default:
+            return .kmh
+        }
     }
 
     /// 速度時系列(km/h)から、目標速度(km/h)に到達した時刻(秒)を線形補間で求める。
