@@ -1,0 +1,13 @@
+// アプリのバージョンはこのファイル1箇所で管理する。
+// （以前は pbxproj の 4 箇所にコピーされていたが、ここへ集約した）
+//
+// MARKETING_VERSION = ユーザーに見せる版。セマンティックバージョニングで意図的に上げる。
+//   ・パッチ 0.0.X = バグ修正
+//   ・マイナー 0.X.0 = 機能追加
+//   ・メジャー X.0.0 = 大改修・正式版（1.0.0）
+//
+// CURRENT_PROJECT_VERSION = ビルド番号。App Store / TestFlight 提出ごとに一意・増加が必須。
+//   git のコミット数で採番する：  Scripts/set_build_number.sh を実行（= git rev-list --count HEAD）。
+
+MARKETING_VERSION = 0.1.36
+CURRENT_PROJECT_VERSION = 36
