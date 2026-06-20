@@ -25,8 +25,9 @@ struct ContentView: View {
     @State private var selectedTab: Tab = .measure
 
     var body: some View {
-        // システム標準のタブバーは（iOS 26 では中央寄せで幅が狭いため）隠し、
-        // 画面幅いっぱいに広がるカスタムタブバーを下部に重ねる。TabView 自体は維持して
+        // システム標準のタブバー（iOS 26）は中央寄せのカプセルで横幅が狭い。横幅は
+        // フル幅にしつつ、システム同様に縦方向を軽く（薄い背景・コンパクト高）保つため、
+        // システムバーを隠してカスタムバーを safeAreaInset で重ねる。TabView は維持して
         // タブ切替でも各タブの @State（MeasureView の engine 等）を保持する。
         TabView(selection: $selectedTab) {
             MeasureView()
@@ -58,7 +59,7 @@ struct ContentView: View {
         }
     }
 
-    // MARK: - カスタムタブバー（画面幅いっぱい・3等分）
+    // MARK: - カスタムタブバー（フル幅・3等分・システム同等のコンパクト高）
 
     private var customTabBar: some View {
         HStack(spacing: 0) {
@@ -67,15 +68,12 @@ struct ContentView: View {
             tabButton(.settings, title: "設定", icon: "gearshape")
         }
         .frame(maxWidth: .infinity)
-        .padding(.top, 10)
-        .padding(.bottom, 6)
-        .background(
-            Color(white: 0.07)
-                .overlay(alignment: .top) {
-                    Rectangle().fill(Color.white.opacity(0.10)).frame(height: 0.5)
-                }
-                .ignoresSafeArea(edges: .bottom)
-        )
+        .padding(.top, 6)
+        .padding(.bottom, 2)
+        .background(.bar)   // システムバーと同じ薄い（半透明）背景で縦を軽く保つ
+        .overlay(alignment: .top) {
+            Rectangle().fill(Color.white.opacity(0.08)).frame(height: 0.5)
+        }
     }
 
     private func tabButton(_ tab: Tab, title: String, icon: String) -> some View {
@@ -83,15 +81,14 @@ struct ContentView: View {
         return Button {
             selectedTab = tab
         } label: {
-            VStack(spacing: 4) {
+            VStack(spacing: 2) {
                 Image(systemName: icon)
-                    .font(.system(size: 24, weight: .semibold))
+                    .font(.system(size: 22, weight: .semibold))
                 Text(title)
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: 10, weight: .semibold))
             }
             // 各ボタンを画面幅の 1/3 に広げ、タップ領域を全面に
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 2)
             .foregroundStyle(selected ? Color.white : Color.gray)
             .contentShape(Rectangle())
         }

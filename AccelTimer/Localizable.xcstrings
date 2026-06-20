@@ -2587,6 +2587,7 @@
       }
     },
     "計測" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
