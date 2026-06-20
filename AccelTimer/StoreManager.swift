@@ -19,6 +19,9 @@ final class StoreManager {
     /// 表示用の価格文字列（未ロード時は nil）。
     var displayPrice: String? { product?.displayPrice }
 
+    /// 共有時に透かしを入れるか（未購入なら true）。買い切り解放で透かしが消える。
+    var showsWatermark: Bool { !isPurchased }
+
     /// 現在の保存件数で、もう1件保存できるか（購入済みなら常に true）。
     func canSaveAnother(currentCount: Int) -> Bool {
         isPurchased || currentCount < Self.freeHistoryLimit

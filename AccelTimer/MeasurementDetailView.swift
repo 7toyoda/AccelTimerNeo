@@ -7,8 +7,11 @@ import Charts
 struct MeasurementDetailView: View {
     let record: MeasurementRecord
     let isBest: Bool
+    @Environment(StoreManager.self) private var store
     @State private var videoPlayer: AVPlayer? = nil
     @State private var isFullScreen: Bool = false
+    /// 共有用に書き出した結果カード画像（無料は透かし付き）。
+    @State private var cardShareURL: URL? = nil
 
     private static let dateFormatter: DateFormatter = {
         let f = DateFormatter()
@@ -23,6 +26,7 @@ struct MeasurementDetailView: View {
             ScrollView {
                 VStack(spacing: 16) {
                     headerSection
+                    shareCardSection
                     if record.hasVideo {
                         videoSection
                     }
@@ -49,6 +53,11 @@ struct MeasurementDetailView: View {
                         videoPlayer = AVPlayer(url: url)
                     }
                 }
+                renderShareCard()
+            }
+            .onChange(of: store.isPurchased) { _, _ in
+                // 購入で透かしが消えるため、カードを再生成する
+                renderShareCard()
             }
             .onDisappear {
                 // 画面を離れたら再生を停止して解放（戻った後に音声が鳴り続けるのを防ぐ）
@@ -59,6 +68,43 @@ struct MeasurementDetailView: View {
         .navigationTitle("計測詳細")
         .navigationBarTitleDisplayMode(.inline)
         .preferredColorScheme(.dark)
+    }
+
+    // MARK: - Share Card
+
+    /// 結果カードを共有用の画像に書き出して `cardShareURL` に格納する。
+    private func renderShareCard() {
+        cardShareURL = ResultCardRenderer.renderURL(record: record,
+                                                    showsWatermark: store.showsWatermark)
+    }
+
+    /// SNS 共有用トロフィーカードのボタン。無料は透かし付き、買い切りで透かしが消える。
+    @ViewBuilder
+    private var shareCardSection: some View {
+        if let url = cardShareURL {
+            VStack(spacing: 8) {
+                ShareLink(
+                    item: url,
+                    preview: SharePreview("計測結果カード",
+                                          image: Image(systemName: "rosette"))
+                ) {
+                    Label("結果カードを共有", systemImage: "square.and.arrow.up")
+                        .font(.headline)
+                        .foregroundStyle(.black)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 50)
+                        .background(
+                            LinearGradient(colors: [.yellow, Color(red: 1, green: 0.7, blue: 0)],
+                                           startPoint: .top, endPoint: .bottom),
+                            in: RoundedRectangle(cornerRadius: 14))
+                }
+                if store.showsWatermark {
+                    Text("「体験版」の透かしを消すには解放が必要です")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
     }
 
     // MARK: - Video
