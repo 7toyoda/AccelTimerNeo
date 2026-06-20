@@ -40,6 +40,12 @@ final class TimerEngine {
     /// 直近に永続化したレコード（新記録の祝福カード表示に使う）。
     private(set) var lastSavedRecord: MeasurementRecord?
     var bestTimes: [Double?] = [nil, nil, nil, nil]
+    /// mph マイルストーンのベスト（NEW RECORD 読み上げ判定用・ContentView から設定）。
+    var mphBestTimes: [Double?] = [nil, nil, nil, nil]
+    /// 読み上げ・触覚に使う現在の表示単位（UserDefaults から都度読む）。
+    private var speedUnit: SpeedUnit {
+        SpeedUnit(rawValue: UserDefaults.standard.string(forKey: "speedUnit") ?? "") ?? .kmh
+    }
     /// バックグラウンド移行による計測中止フラグ（復帰時にトーストで通知）
     private(set) var backgroundAbortedRun: Bool = false
 
@@ -769,6 +775,9 @@ final class TimerEngine {
         let (prevSpeed, prevTime) = prev
         let (currSpeed, currTime) = curr
 
+        // mph マイルストーンを先に処理（100km/h 完了と同一サンプルでも取りこぼさない）
+        checkMphSplits(prev: prev, curr: curr, source: source)
+
         for (i, threshold) in Self.splitThresholdsMs.enumerated() {
             guard splits[i] == nil,
                   prevSpeed < threshold,
@@ -807,24 +816,26 @@ final class TimerEngine {
             splits[i] = splitTime
             let splitLabels = ["40", "60", "80", "100"]
             logger.logEvent("SPLIT_\(splitLabels[i])(\(source))", wallTime: crossTime, startTime: start)
-            if i < 3 { hapticMedium.impactOccurred() }
-
-            let words = ["40", "60", "80", String(localized: "100、計測完了")]
-            let isNewBest = i == 3 && (bestTimes[3].map { splitTime < $0 } ?? true)
-            let text = isNewBest ? String(localized: "\(words[i])、NEW RECORD") : words[i]
-            speak(text)
+            // 読み上げ・触覚は km/h 表示時のみ（mph 表示時は checkMphSplits 側で行う）
+            if speedUnit == .kmh {
+                if i < 3 { hapticMedium.impactOccurred() }
+                let words = ["40", "60", "80", String(localized: "100、計測完了")]
+                let isNewBest = i == 3 && (bestTimes[3].map { splitTime < $0 } ?? true)
+                let text = isNewBest ? String(localized: "\(words[i])、NEW RECORD") : words[i]
+                speak(text)
+            }
 
             if i == 3 { finishMeasurement(); return }
         }
-        checkMphSplits(prev: prev, curr: curr, source: source)
     }
 
-    /// mph マイルストーン [15,30,45,60] mph を並行記録する（完了・読み上げ・触覚なし）。
-    /// 中核の 100 km/h 完了判定には一切影響しない加算的な処理。
+    /// mph マイルストーン [15,30,45,60] mph を並行記録する。完了判定には影響しない。
+    /// mph 表示時のみ読み上げ・触覚を行う（km/h 表示時は checkSplits 側）。
     private func checkMphSplits(prev: (Double, Date), curr: (Double, Date), source: String = "KALMAN") {
         guard let start = startTime else { return }
         let (prevSpeed, prevTime) = prev
         let (currSpeed, currTime) = curr
+        let announce = (speedUnit == .mph)
         for (i, threshold) in Self.mphSplitThresholdsMs.enumerated() {
             guard mphSplits[i] == nil, prevSpeed < threshold, currSpeed >= threshold else { continue }
             // Kalman 偽検出ガード（km/h スプリットの 40/60/80 と同等）
@@ -832,7 +843,20 @@ final class TimerEngine {
             let crossTime = Self.interpolatedCrossTime(
                 threshold: threshold, prev: (prevSpeed, prevTime), curr: (currSpeed, currTime))
             guard crossTime >= start else { continue }
-            mphSplits[i] = crossTime.timeIntervalSince(start)
+            let splitTime = crossTime.timeIntervalSince(start)
+            mphSplits[i] = splitTime
+            logger.logEvent("MPHSPLIT_\(["15","30","45","60"][i])(\(source))", wallTime: crossTime, startTime: start)
+            guard announce else { continue }
+            // 0-60mph がユーザーにとっての完了。60mph で完了読み上げ＋成功触覚。
+            if i == 3 {
+                hapticNotify.notificationOccurred(.success)
+                let isNewBest = mphBestTimes[3].map { splitTime < $0 } ?? true
+                speak(isNewBest ? String(localized: "60、NEW RECORD")
+                                : String(localized: "60、計測完了"))
+            } else {
+                hapticMedium.impactOccurred()
+                speak(["15", "30", "45"][i])
+            }
         }
     }
 
@@ -871,7 +895,8 @@ final class TimerEngine {
         }
         logger.logEvent("FINISH", startTime: startTime)
         DebugLogger.shared.logEvent("FINISH", state: stateName)
-        hapticNotify.notificationOccurred(.success)
+        // mph 表示時は 60mph 到達時に成功触覚済み。ここでの 100km/h 完了触覚は km/h 時のみ。
+        if speedUnit == .kmh { hapticNotify.notificationOccurred(.success) }
         // 完了後もモーション(100Hz)を継続し、100km/h通過を滑らかに補間する（オーバーレイにも効く）。
         // 表示目標は直近GPS値。加速中は加速度で外挿、減速はGPS目標へイーズ（handleMotion .finished）。
         // 完了時：走行表示(やや遅れ)から「完了時点の実GPS速度」へ向けて補間開始。

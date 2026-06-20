@@ -128,6 +128,7 @@ struct MeasureView: View {
         mphBests = targets.map { target in
             records.compactMap { SpeedUnit.time(toReachKmh: target, in: $0.speedTimeline) }.min()
         }
+        engine.mphBestTimes = mphBests   // NEW RECORD 読み上げ判定に使う
     }
 
     private static let splitLabels = ["0→40", "0→60", "0→80", "0→100"]
