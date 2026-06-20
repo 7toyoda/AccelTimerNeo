@@ -95,6 +95,10 @@ struct MeasureView: View {
         if store.canSaveAnother(currentCount: records.count) {
             engine.saveAndArm(context: modelContext)
         } else {
+            // 保存上限：レコードを保存しない。arm() の finished→armed 遷移で動画だけ
+            // 保存され、対応レコードが無く孤立／別計測へ誤ひも付けされるのを防ぐため、
+            // 先に録画を破棄して isVideoRecording を落とす。
+            discardCurrentVideo()
             engine.arm()
             presentFreeLimitPaywall()
         }
@@ -103,10 +107,21 @@ struct MeasureView: View {
     /// autoReset=OFF 完了時の保存を試みる。上限なら保存せず結果表示を維持し、解放を促す。
     private func attemptSaveResult() {
         if store.canSaveAnother(currentCount: records.count) {
+            stopVideoRecordingIfNeeded()              // レコードと対で動画を保存
             engine.saveResult(context: modelContext)
         } else {
+            discardCurrentVideo()                      // 上限：動画も保存しない
             presentFreeLimitPaywall()
         }
+    }
+
+    /// 録画中の動画を保存せず破棄する。保存上限でレコードを残さない時に、動画だけ
+    /// 保存されて孤立・別計測への誤ひも付けが起きるのを防ぐ。
+    private func discardCurrentVideo() {
+        recordingStopTask?.cancel()
+        recordingStopTask = nil
+        recorder.cancelAndDiscard()
+        isVideoRecording = false
     }
 
     /// 無料の保存上限ペイウォールを提示（同一上限セッション中は1回だけ）。
@@ -217,10 +232,8 @@ struct MeasureView: View {
                 attemptSaveAndArm()
                 // saveAndArm → arm() → state=.armed の onChange で録画停止される
             } else {
-                // autoReset=OFF かつ finished: state が .armed にならないためここで停止
-                recordingStopTask?.cancel()
-                recordingStopTask = nil
-                stopVideoRecordingIfNeeded()
+                // autoReset=OFF かつ finished: state が .armed にならないため、保存/破棄は
+                // attemptSaveResult が動画とレコードを対で扱う（上限時は両方とも保存しない）。
                 attemptSaveResult()
             }
         }
@@ -336,7 +349,13 @@ struct MeasureView: View {
                 isVideoRecording = false
                 engine.abortRunDueToBackground()  // state → .armed
             } else if engine.state == .finished {
-                stopVideoRecordingIfNeeded()
+                // 上限でレコードが残らない時は動画も保存しない（孤立・誤ひも付け防止）。
+                // 既に保存済みなら isVideoRecording=false で no-op。
+                if store.canSaveAnother(currentCount: records.count) {
+                    stopVideoRecordingIfNeeded()
+                } else {
+                    discardCurrentVideo()
+                }
                 engine.pauseLocationIfFinished()  // GPS停止でバッテリー節約
             } else {
                 recorder.cancelAndDiscard()
@@ -732,11 +751,17 @@ struct MeasureView: View {
             recorder.lockForRun()
             recorder.recordedPeakKmh = 0
         case .finished:
-            // 100km/h 到達後も録画継続。停車しない場合に備えて10秒で保存する保険タイマー
+            // 100km/h 到達後も録画継続。停車しない場合に備えて10秒で保存する保険タイマー。
+            // ただし保存上限（無料）でレコードが残らない時は動画も破棄（孤立防止）。
+            // この時点ではまだレコード未保存のため records.count で上限判定して問題ない。
             recordingStopTask = Task {
                 try? await Task.sleep(for: .seconds(10))
                 guard !Task.isCancelled else { return }
-                stopVideoRecordingIfNeeded()
+                if store.canSaveAnother(currentCount: records.count) {
+                    stopVideoRecordingIfNeeded()
+                } else {
+                    discardCurrentVideo()
+                }
             }
         case .armed:
             recordingStopTask?.cancel()
