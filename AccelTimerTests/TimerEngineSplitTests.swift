@@ -66,4 +66,15 @@ final class TimerEngineSplitTests: XCTestCase {
             XCTAssertEqual(actual, exp, accuracy: 1e-9)
         }
     }
+
+    /// 位置ベース速度が未確定の間は、古い値で正常な発進直後のGPSを偽Doppler扱いしない。
+    func testFakeDopplerRequiresFreshPositionSpeed() {
+        XCTAssertFalse(TimerEngine.isFakeDopplerSpeed(speedKmh: 45.0, positionSpeedKmh: nil))
+    }
+
+    /// Doppler速度だけが高く、同じサンプルで確認した位置ベース速度が大きく低い場合は偽高速とみなす。
+    func testFakeDopplerRejectsStationaryHighSpeedSpike() {
+        XCTAssertTrue(TimerEngine.isFakeDopplerSpeed(speedKmh: 80.0, positionSpeedKmh: 5.0))
+        XCTAssertFalse(TimerEngine.isFakeDopplerSpeed(speedKmh: 80.0, positionSpeedKmh: 45.0))
+    }
 }

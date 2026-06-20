@@ -206,6 +206,13 @@ final class TimerEngine {
         return prev.time.addingTimeInterval(frac * curr.time.timeIntervalSince(prev.time))
     }
 
+    /// GPS Doppler が高速を示す一方で、同じサンプルで更新した位置ベース速度が大きく下回る場合は
+    /// 停車中の速度グリッチとみなす。位置速度がまだ未確定なら判定しない。
+    nonisolated static func isFakeDopplerSpeed(speedKmh: Double, positionSpeedKmh: Double?) -> Bool {
+        guard let positionSpeedKmh else { return false }
+        return speedKmh > 30.0 && positionSpeedKmh < speedKmh * 0.4
+    }
+
     init() {
         location.onSpeedUpdate = { [weak self] speedMs, timestamp, speedAccuracy, horizontalAccuracy, coordinate in
             self?.handleGPS(speedMs: speedMs,
@@ -386,14 +393,17 @@ final class TimerEngine {
 
         // 位置ベース速度の検算（約1秒間隔で更新。GPS位置ジッタを平均化するため短すぎる間隔では測らない）
         let coordNow = coordinate
+        var currentPositionSpeedKmh: Double?
+        var nextPosAnchorCoord: CLLocationCoordinate2D?
+        var nextPosAnchorTime: Date?
         if let anchor = posAnchorCoord {
             let dt = timestamp.timeIntervalSince(posAnchorTime)
             if dt >= 1.0 {
                 let dist = CLLocation(latitude: anchor.latitude, longitude: anchor.longitude)
                     .distance(from: CLLocation(latitude: coordNow.latitude, longitude: coordNow.longitude))
-                positionSpeedKmh = (dist / dt) * 3.6
-                posAnchorCoord = coordNow
-                posAnchorTime  = timestamp
+                currentPositionSpeedKmh = (dist / dt) * 3.6
+                nextPosAnchorCoord = coordNow
+                nextPosAnchorTime = timestamp
             }
         } else {
             posAnchorCoord = coordNow
@@ -401,9 +411,14 @@ final class TimerEngine {
         }
         // Doppler が高速(>30km/h)を示すのに位置がほとんど動いていない＝GPS Doppler の誤り（停車中の偽高速）。
         // 巡航中は位置も同等に動くので誤抑制しない。RUNNING中は計測値にも混ぜず、偽FINISHを防ぐ。
-        let dopplerLooksFake = speedKmh > 30.0 && positionSpeedKmh < speedKmh * 0.4
+        let dopplerLooksFake = Self.isFakeDopplerSpeed(speedKmh: speedKmh,
+                                                       positionSpeedKmh: currentPositionSpeedKmh)
         if dopplerLooksFake {
             rememberGPSSample = false
+        } else if let nextPosAnchorCoord, let nextPosAnchorTime, let currentPositionSpeedKmh {
+            positionSpeedKmh = currentPositionSpeedKmh
+            posAnchorCoord = nextPosAnchorCoord
+            posAnchorTime = nextPosAnchorTime
         }
 
         // カルマンフィルタは armed/running 中のみ更新。

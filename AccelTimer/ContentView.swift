@@ -98,8 +98,6 @@ struct MeasureView: View {
     @State private var videoErrorMessage: String? = nil
     @State private var pendingVideoFileName: String? = nil
     @State private var backgroundAbortToast = false
-    // 無料の保存上限に達したペイウォールを一度提示したら、空きができるまで連発しない
-    @State private var freeLimitNoticeShown = false
     // 新記録（自己ベスト更新）を出したときに祝福シートで表示するレコード
     @State private var celebrationRecord: MeasurementRecord?
     // 表示単位（km/h / mph）。計測の中核は常に km/h、表示とマイルストーンのみ切替。
@@ -132,54 +130,31 @@ struct MeasureView: View {
 
     private static let splitLabels = ["0→40", "0→60", "0→80", "0→100"]
 
-    /// 完了/中断後の保存を試みる。無料の保存上限なら保存せず待機へ戻し、解放を促す。
-    /// 計測自体は無料なので、保存できなくても arm() で次の計測へ進める。
+    /// 完了/中断後の結果を保存して次の待機へ進める。計測・履歴保存は無料・無制限。
     private func attemptSaveAndArm() {
-        if store.canSaveAnother(currentCount: records.count) {
-            let prevBest = best100
-            let prevMphBest = mphBests[3]
-            let prevSaved = engine.lastSavedRecord
-            engine.saveAndArm(context: modelContext)
-            presentCelebrationIfNewBest(prevBest: prevBest, prevMphBest: prevMphBest, prevSaved: prevSaved)
-        } else {
-            // 保存上限：レコードを保存しない。arm() の finished→armed 遷移で動画だけ
-            // 保存され、対応レコードが無く孤立／別計測へ誤ひも付けされるのを防ぐため、
-            // 先に録画を破棄して isVideoRecording を落とす。
-            discardCurrentVideo()
-            engine.arm()
-            presentFreeLimitPaywall()
-        }
+        let prevBest = best100
+        let prevMphBest = mphBests[3]
+        let prevSaved = engine.lastSavedRecord
+        engine.saveAndArm(context: modelContext)
+        presentCelebrationIfNewBest(prevBest: prevBest, prevMphBest: prevMphBest, prevSaved: prevSaved)
     }
 
-    /// autoReset=OFF 完了時の保存を試みる。上限なら保存せず結果表示を維持し、解放を促す。
+    /// autoReset=OFF 完了時に、レコードと動画を対で保存する。
     private func attemptSaveResult() {
-        if store.canSaveAnother(currentCount: records.count) {
-            let prevBest = best100
-            let prevMphBest = mphBests[3]
-            let prevSaved = engine.lastSavedRecord
-            stopVideoRecordingIfNeeded()              // レコードと対で動画を保存
-            engine.saveResult(context: modelContext)
-            presentCelebrationIfNewBest(prevBest: prevBest, prevMphBest: prevMphBest, prevSaved: prevSaved)
-        } else {
-            discardCurrentVideo()                      // 上限：動画も保存しない
-            presentFreeLimitPaywall()
-        }
+        let prevBest = best100
+        let prevMphBest = mphBests[3]
+        let prevSaved = engine.lastSavedRecord
+        stopVideoRecordingIfNeeded()
+        engine.saveResult(context: modelContext)
+        presentCelebrationIfNewBest(prevBest: prevBest, prevMphBest: prevMphBest, prevSaved: prevSaved)
     }
 
-    /// 録画中の動画を保存せず破棄する。保存上限でレコードを残さない時に、動画だけ
-    /// 保存されて孤立・別計測への誤ひも付けが起きるのを防ぐ。
+    /// 録画中の動画を保存せず破棄する。計測中断や権限変更など、レコードを残さない時に使う。
     private func discardCurrentVideo() {
         recordingStopTask?.cancel()
         recordingStopTask = nil
         recorder.cancelAndDiscard()
         isVideoRecording = false
-    }
-
-    /// 無料の保存上限ペイウォールを提示（同一上限セッション中は1回だけ）。
-    private func presentFreeLimitPaywall() {
-        guard !freeLimitNoticeShown else { return }
-        freeLimitNoticeShown = true
-        showPaywall = true
     }
 
     /// 直前の保存が表示単位の自己ベスト更新なら祝福シートを出す。
@@ -301,8 +276,8 @@ struct MeasureView: View {
                 attemptSaveAndArm()
                 // saveAndArm → arm() → state=.armed の onChange で録画停止される
             } else {
-                // autoReset=OFF かつ finished: state が .armed にならないため、保存/破棄は
-                // attemptSaveResult が動画とレコードを対で扱う（上限時は両方とも保存しない）。
+                // autoReset=OFF かつ finished: state が .armed にならないため、
+                // attemptSaveResult が動画とレコードを対で扱う。
                 attemptSaveResult()
             }
         }
@@ -343,8 +318,6 @@ struct MeasureView: View {
         .onChange(of: records) { _, _ in
             engine.bestTimes = bests
             recomputeMphBests()
-            // 履歴削除などで空きができたら、上限ペイウォールの再提示を許可する
-            if store.canSaveAnother(currentCount: records.count) { freeLimitNoticeShown = false }
             applyPendingVideoFileName()
             // 新規保存レコードの国コードを後追い付与（将来の国別ランキング用）
             Task { await CountryGeocoder.shared.backfill(records: records) }
@@ -380,7 +353,7 @@ struct MeasureView: View {
         measureStage1
         // 購入完了（または起動時の権利確認）でペイウォールを閉じる。
         .onChange(of: store.isPurchased) { _, purchased in
-            if purchased { showPaywall = false; freeLimitNoticeShown = false }
+            if purchased { showPaywall = false }
         }
         // 事前アナウンス完了（許可ダイアログ後）→ idle なら待機開始。免責→アナウンス後にarmが初めて走る
         .onChange(of: hasSeenLocationPrimer) { _, seen in
@@ -430,13 +403,8 @@ struct MeasureView: View {
                 isVideoRecording = false
                 engine.abortRunDueToBackground()  // state → .armed
             } else if engine.state == .finished {
-                // 上限でレコードが残らない時は動画も保存しない（孤立・誤ひも付け防止）。
-                // 既に保存済みなら isVideoRecording=false で no-op。
-                if store.canSaveAnother(currentCount: records.count) {
-                    stopVideoRecordingIfNeeded()
-                } else {
-                    discardCurrentVideo()
-                }
+                // 既に保存済みなら isVideoRecording=false で no-op。未保存なら動画とレコードを対で保存する。
+                stopVideoRecordingIfNeeded()
                 engine.pauseLocationIfFinished()  // GPS停止でバッテリー節約
             } else {
                 recorder.cancelAndDiscard()
@@ -833,16 +801,10 @@ struct MeasureView: View {
             recorder.recordedPeakKmh = 0
         case .finished:
             // 100km/h 到達後も録画継続。停車しない場合に備えて10秒で保存する保険タイマー。
-            // ただし保存上限（無料）でレコードが残らない時は動画も破棄（孤立防止）。
-            // この時点ではまだレコード未保存のため records.count で上限判定して問題ない。
             recordingStopTask = Task {
                 try? await Task.sleep(for: .seconds(10))
                 guard !Task.isCancelled else { return }
-                if store.canSaveAnother(currentCount: records.count) {
-                    stopVideoRecordingIfNeeded()
-                } else {
-                    discardCurrentVideo()
-                }
+                stopVideoRecordingIfNeeded()
             }
         case .armed:
             recordingStopTask?.cancel()

@@ -5,7 +5,7 @@
 **変更前に該当箇所を読み、ここに書かれた意図的な設計を壊さないこと。** 記述と実
 コードが食い違う場合は実コードを正とし、本書を更新すること。
 
-最終更新時の状態: バージョン 0.1.46 系 / Swift 6 / SwiftUI / SwiftData / iOS 17+。
+最終更新時の状態: バージョン 0.1.47 系 / Swift 6 / SwiftUI / SwiftData / iOS 17+。
 リポジトリ: GitHub `toy0da/accel-timer`（main ブランチ運用）。
 
 ---
@@ -26,7 +26,8 @@
   速度精度を採用。
 - 位置ベース速度との検算で Doppler 偽高速（速度だけ高く、座標がほぼ動かない）を検出した
   GPS サンプルは RUNNING 中の Kalman / split / finish / peak に混ぜない。停車中のGPS速度
-  グリッチによる偽FINISHを防ぐため。
+  グリッチによる偽FINISHを防ぐため。誤抑制を避けるため、この判定は同じGPSサンプルで
+  位置ベース速度を更新できた時だけ有効にする。
 
 ## 2. 発進検出（lookback と微速クリープ対策）
 
@@ -82,19 +83,16 @@
 
 **計測・履歴保存・共有は常に無料・無制限。無料ユーザーが共有する結果カードには
 「体験版」透かしを入れ、買い切りで透かしを除去する**。
-- 旧「履歴5件まで無料→超過でペイウォール」型は廃止。`StoreManager.canSaveAnother`
-  は保存経路互換のため残しているが常に `true`。保存を課金で止めない。
+- 旧「履歴5件まで無料→超過でペイウォール」型は廃止。保存を課金で止める分岐は削除済み。
 - 課金判定は `StoreManager.isPurchased` / `showsWatermark` が中心。`ResultCardView` /
   `CelebrationView` / `MeasurementDetailView` のカード共有で透かし有無を分岐する。
 - 買い切り（非消費型 IAP `com.acceltimer.app.AccelTimer.unlock`、¥800、StoreKit2）。
   ローカルテストは `AccelTimer.storekit` をスキームが参照。
 - `TrialKeychain.swift` は現在未使用（将来の不正防止用に残置）。
-- **不変条件: 動画はレコードと対でのみ保存する**（v0.1.31）。保存上限でレコードを
+- **不変条件: 動画はレコードと対でのみ保存する**（v0.1.31）。計測中断などでレコードを
   残さない時は動画も `discardCurrentVideo()` で破棄すること。さもないと動画だけ
   保存されて孤立し、`applyPendingVideoFileName` が別計測へ誤ひも付けする。保存経路
   （attemptSaveAndArm/attemptSaveResult/10秒保険/onDisappear(finished)）はこの規則を守る。
-  なお `handleStateChange(.armed)` の動画保存は record 保存後に走るため `records.count`
-  での上限判定は入れない（更新タイミング差で正しい計測の動画を誤破棄するため）。
 
 ## 8. 省電力
 

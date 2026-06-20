@@ -20,11 +20,6 @@ final class StoreManager {
     /// 共有時に透かしを入れるか（未購入なら true）。買い切り解放で透かしが消える。
     var showsWatermark: Bool { !isPurchased }
 
-    /// もう1件保存できるか。計測・履歴の保存は無料・無制限になったため常に true。
-    /// （課金は「共有物の透かし除去」へ移行。`showsWatermark` 参照）
-    /// 保存経路の呼び出し側互換のため関数として残す。
-    func canSaveAnother(currentCount: Int) -> Bool { true }
-
     init() {
         // App Store 外（他デバイスでの購入・返金など）からのトランザクション更新を監視
         Task { [weak self] in
