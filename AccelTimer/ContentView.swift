@@ -569,12 +569,9 @@ struct MeasureView: View {
                         .font(.system(size: 40, weight: .black, design: .rounded))
                         .foregroundStyle(.orange)
                         .opacity(gpsPulse ? 1.0 : 0.4)
-                } else if engine.state == .armed && !engine.deviceSteadyWhileArmed {
-                    Text("端末を固定してください")
-                        .font(.system(size: 34, weight: .black, design: .rounded))
-                        .foregroundStyle(.orange)
-                        .opacity(gpsPulse ? 1.0 : 0.4)
                 } else {
+                    // 停車確認＋GPS良好で READY。端末固定はトリガー/録画の必須条件ではない
+                    // （手持ちでも計測可・参考値扱い）ため、固定の案内はサブ文言で促す。
                     Text("READY")
                         .font(.system(size: 48, weight: .black, design: .rounded))
                         .foregroundStyle(.green)

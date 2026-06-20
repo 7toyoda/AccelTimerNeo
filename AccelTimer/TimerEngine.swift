@@ -96,7 +96,9 @@ final class TimerEngine {
     private var ringBuffer: [MotionSample] = []
     private var lpfWindow:  [Double] = []
 
-    private static let ringBufferCapacity = 200   // 2 秒 × 100 Hz
+    // 4 秒 × 100 Hz。GPS トリガーが遅延（発進後に初回 GPS が来る）しても発進直後の
+    // 加速度がバッファに残るよう 2 秒→4 秒に拡大。加速度グラフの開始欠けを防ぐ。
+    private static let ringBufferCapacity = 400
     private static let lpfWindowSize      = 5     // 50 ms 移動平均
     private static let launchThresholdMs2 = 0.30  // 発進判定しきい値・lookBack静止検出 (m/s²)
     private static let prelaunchQuietLen  = 5     // 発進前の静止確認サンプル数（≈50 ms）
