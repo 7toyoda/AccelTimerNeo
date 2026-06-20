@@ -21,26 +21,19 @@ struct ContentView: View {
         return nil
     }
 
-    private enum Tab: Hashable { case measure, history, settings }
-    @State private var selectedTab: Tab = .measure
-
     var body: some View {
-        // システム標準のタブバー（iOS 26）は中央寄せのカプセルで横幅が狭い。横幅は
-        // フル幅にしつつ、システム同様に縦方向を軽く（薄い背景・コンパクト高）保つため、
-        // システムバーを隠してカスタムバーを safeAreaInset で重ねる。TabView は維持して
-        // タブ切替でも各タブの @State（MeasureView の engine 等）を保持する。
-        TabView(selection: $selectedTab) {
+        // iOS 26 のシステム浮かぶタブバーを使用（横向きでも OS が適切に縦を確保する）。
+        // 中央寄せカプセルの横幅を稼ぐため、各ラベルの左右にスペースを入れて広げる。
+        // 翻訳を保つため、ローカライズ済み文字列を取得してから前後にスペースを付ける
+        // （"  計測  " を直接キーにすると en/ko/zh で日本語のまま表示されてしまう）。
+        TabView {
             MeasureView()
-                .tag(Tab.measure)
-                .toolbar(.hidden, for: .tabBar)
+                .tabItem { tabLabel("計測", "gauge.high") }
             HistoryView()
-                .tag(Tab.history)
-                .toolbar(.hidden, for: .tabBar)
+                .tabItem { tabLabel("履歴", "clock.arrow.circlepath") }
             SettingsView()
-                .tag(Tab.settings)
-                .toolbar(.hidden, for: .tabBar)
+                .tabItem { tabLabel("設定", "gearshape") }
         }
-        .safeAreaInset(edge: .bottom, spacing: 0) { customTabBar }
         .preferredColorScheme(.dark)
         .environment(store)
         // 免責 → 事前アナウンスの順に全画面表示（完了するまで閉じられない）。
@@ -59,40 +52,14 @@ struct ContentView: View {
         }
     }
 
-    // MARK: - カスタムタブバー（フル幅・3等分・システム同等のコンパクト高）
-
-    private var customTabBar: some View {
-        HStack(spacing: 0) {
-            tabButton(.measure,  title: "計測", icon: "gauge.high")
-            tabButton(.history,  title: "履歴", icon: "clock.arrow.circlepath")
-            tabButton(.settings, title: "設定", icon: "gearshape")
+    /// タブのラベル。ローカライズ済みタイトルの前後にスペースを足して、システム浮かぶ
+    /// タブバー（iOS 26）のカプセル幅を広げる。スペースは表示幅稼ぎのみで翻訳には影響しない。
+    private func tabLabel(_ titleKey: LocalizedStringResource, _ icon: String) -> some View {
+        Label {
+            Text(verbatim: "   \(String(localized: titleKey))   ")
+        } icon: {
+            Image(systemName: icon)
         }
-        .frame(maxWidth: .infinity)
-        .padding(.top, 6)
-        .padding(.bottom, 2)
-        .background(.bar)   // システムバーと同じ薄い（半透明）背景で縦を軽く保つ
-        .overlay(alignment: .top) {
-            Rectangle().fill(Color.white.opacity(0.08)).frame(height: 0.5)
-        }
-    }
-
-    private func tabButton(_ tab: Tab, title: String, icon: String) -> some View {
-        let selected = (selectedTab == tab)
-        return Button {
-            selectedTab = tab
-        } label: {
-            VStack(spacing: 2) {
-                Image(systemName: icon)
-                    .font(.system(size: 22, weight: .semibold))
-                Text(title)
-                    .font(.system(size: 10, weight: .semibold))
-            }
-            // 各ボタンを画面幅の 1/3 に広げ、タップ領域を全面に
-            .frame(maxWidth: .infinity)
-            .foregroundStyle(selected ? Color.white : Color.gray)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
     }
 }
 
