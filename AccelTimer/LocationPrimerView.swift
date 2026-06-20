@@ -5,6 +5,7 @@ import SwiftUI
 /// 「続ける」を押すと onContinue が呼ばれ、呼び出し側が arm()＝許可要求を発火する。
 struct LocationPrimerView: View {
     var onContinue: () -> Void
+    private var headlineLabel: String { SpeedUnit.defaultForLocale.headlineLabel }
 
     var body: some View {
         ZStack {
@@ -27,7 +28,7 @@ struct LocationPrimerView: View {
                         .padding(.top, 12)
 
                         VStack(alignment: .leading, spacing: 16) {
-                            row("speedometer", "GPSのドップラー速度で0–100km/hのタイムを高精度に計測します。")
+                            row("speedometer", "GPSのドップラー速度で\(headlineLabel)のタイムを高精度に計測します。")
                             row("location.slash", "位置情報を許可しないと計測できません。")
                             row("lock.shield", "計測データと位置情報は端末内にのみ保存され、外部に送信しません。")
                             row("bolt.car", "次の画面で「Appの使用中は許可」を選んでください。")

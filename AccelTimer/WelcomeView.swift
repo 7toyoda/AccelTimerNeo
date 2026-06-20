@@ -8,6 +8,7 @@ struct WelcomeView: View {
 
     @State private var glow = false
     @State private var edgeAngle: Double = 0
+    private var headlineLabel: String { SpeedUnit.defaultForLocale.headlineLabel }
 
     private static let features: [(String, LocalizedStringKey)] = [
         ("scope",             "GPS×加速度センサーで高精度計測"),
@@ -42,7 +43,7 @@ struct WelcomeView: View {
                     .font(.system(size: 40, weight: .heavy, design: .rounded))
                     .foregroundStyle(.white)
                     .padding(.top, 18)
-                Text("0–100 km/h を、プロ級の精度で。")
+                Text("\(headlineLabel) を、プロ級の精度で。")
                     .font(.headline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
