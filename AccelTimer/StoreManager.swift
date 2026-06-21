@@ -1,24 +1,60 @@
 import Foundation
 import StoreKit
 
-/// 買い切り解放（StoreKit 2 非消費型 IAP）を管理する。
-/// 計測・履歴の保存・共有はすべて無料・無制限。無料ユーザーが共有する結果カードには
-/// 「体験版」の透かしが入り、買い切り解放で透かしが消える（`showsWatermark`）。
+/// 買い切り解放（StoreKit 2 非消費型 IAP）と無料トライアルを管理する。
+/// 課金モデル：累計 `freeTrialLimit` 回の完走まで無料。使い切った後も「1日1回」は無料で完走でき、
+/// それ以上は買い切り解放（無制限）が必要。カウントは `TrialKeychain`（再インストールでもリセット不可）。
 @Observable
 @MainActor
 final class StoreManager {
     /// App Store Connect で登録する非消費型プロダクト ID。
     static let unlockProductID = "com.acceltimer.app.AccelTimer.unlock"
+    /// 無料で完走できる累計回数。これを超えると「1日1回」のみ無料。
+    static let freeTrialLimit = 30
 
     private(set) var isPurchased = false
     private(set) var product: Product?
     private(set) var purchaseInFlight = false
+    /// 無料完走の累計回数（Keychain ミラー・UI 反映用に @Observable 化）。
+    private(set) var trialCount: Int = TrialKeychain.measurementCount
+    /// 最後に無料完走した日（"yyyy-MM-dd"）。
+    private(set) var lastFreeDay: String = TrialKeychain.lastFreeDay
 
     /// 表示用の価格文字列（未ロード時は nil）。
     var displayPrice: String? { product?.displayPrice }
 
     /// 共有時に透かしを入れるか（未購入なら true）。買い切り解放で透かしが消える。
     var showsWatermark: Bool { !isPurchased }
+
+    /// 今日の年月日（ローカル）。"yyyy-MM-dd"。
+    private static var todayString: String {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.calendar = Calendar.current
+        f.timeZone = .current
+        f.dateFormat = "yyyy-MM-dd"
+        return f.string(from: Date())
+    }
+
+    /// 累計枠を使い切ったか。
+    var trialExhausted: Bool { trialCount >= Self.freeTrialLimit }
+    /// 今日すでに無料完走を使ったか（累計枠超過後の「1日1回」判定用）。
+    var freeUsedToday: Bool { lastFreeDay == Self.todayString }
+    /// 無料枠の残り回数（累計枠内のみ。0 になったら「1日1回」運用）。
+    var freeTrialRemaining: Int { max(0, Self.freeTrialLimit - trialCount) }
+
+    /// 新しい計測を開始してよいか。
+    /// 購入済み or 累計枠が残っている or（枠超過でも）今日まだ無料完走していない、なら可。
+    var canMeasure: Bool { isPurchased || !trialExhausted || !freeUsedToday }
+
+    /// 完走（headline 到達）した計測を 1 回ぶん記録する。購入済みなら何もしない。
+    func registerCompletedMeasurement() {
+        guard !isPurchased else { return }
+        trialCount += 1
+        TrialKeychain.measurementCount = trialCount
+        lastFreeDay = Self.todayString
+        TrialKeychain.lastFreeDay = lastFreeDay
+    }
 
     init() {
         // App Store 外（他デバイスでの購入・返金など）からのトランザクション更新を監視

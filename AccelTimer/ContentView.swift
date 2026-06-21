@@ -130,13 +130,22 @@ struct MeasureView: View {
 
     private static let splitLabels = ["0→40", "0→60", "0→80", "0→100"]
 
-    /// 完了/中断後の結果を保存して次の待機へ進める。計測・履歴保存は無料・無制限。
+    /// 完了/中断後の結果を保存して次の待機へ進める。
     private func attemptSaveAndArm() {
         let prevBest = best100
         let prevMphBest = mphBests[3]
         let prevSaved = engine.lastSavedRecord
         engine.saveAndArm(context: modelContext)
+        registerIfCompleted(prevSaved: prevSaved)
         presentCelebrationIfNewBest(prevBest: prevBest, prevMphBest: prevMphBest, prevSaved: prevSaved)
+        // 無料枠を使い切ったら、armされた次計測を次runloopで解除しロックする。
+        // （.armed の onChange で動画保存が走った後に cancel するため async）
+        if !store.canMeasure {
+            DispatchQueue.main.async {
+                if engine.state == .armed { engine.cancel() }
+                if celebrationRecord == nil { showPaywall = true }
+            }
+        }
     }
 
     /// autoReset=OFF 完了時に、レコードと動画を対で保存する。
@@ -146,7 +155,14 @@ struct MeasureView: View {
         let prevSaved = engine.lastSavedRecord
         stopVideoRecordingIfNeeded()
         engine.saveResult(context: modelContext)
+        registerIfCompleted(prevSaved: prevSaved)
         presentCelebrationIfNewBest(prevBest: prevBest, prevMphBest: prevMphBest, prevSaved: prevSaved)
+    }
+
+    /// 直前の保存が「新規の完走レコード」なら無料枠を1回消費する。
+    private func registerIfCompleted(prevSaved: MeasurementRecord?) {
+        guard let saved = engine.lastSavedRecord, saved !== prevSaved, saved.isComplete else { return }
+        store.registerCompletedMeasurement()
     }
 
     /// 録画中の動画を保存せず破棄する。計測中断や権限変更など、レコードを残さない時に使う。
@@ -266,6 +282,40 @@ struct MeasureView: View {
             if engine.locationDenied {
                 locationDeniedOverlay
             }
+            // 無料枠を使い切った：計測ロック画面を最前面に表示（位置情報ガイドより下）
+            else if showMeasurementLock {
+                lockedMeasurementOverlay
+            }
+        }
+    }
+
+    /// 無料枠を使い切って計測がロックされている状態か。
+    private var showMeasurementLock: Bool {
+        onboardingDone && !store.canMeasure && engine.state == .idle
+    }
+
+    /// 無料枠を使い切った時のロック画面（買い切りへ誘導）。
+    private var lockedMeasurementOverlay: some View {
+        ZStack {
+            Color.black.opacity(0.92).ignoresSafeArea()
+            VStack(spacing: 18) {
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 52))
+                    .foregroundStyle(.yellow)
+                Text("今日の無料計測は終了です")
+                    .font(.title2.weight(.heavy))
+                    .foregroundStyle(.white)
+                    .multilineTextAlignment(.center)
+                Text("無料体験（\(StoreManager.freeTrialLimit)回）を使い切りました。明日また1回計測できます。買い切りで今すぐ無制限になります。")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 24)
+                BigButton(label: "無制限に解放（購入）", color: .orange) {
+                    showPaywall = true
+                }
+                .padding(.horizontal, 24)
+            }
         }
     }
 
@@ -287,7 +337,7 @@ struct MeasureView: View {
             guard newValue, engine.state == .finished else { return }
             Task { @MainActor in
                 if engine.isResultSaved {
-                    engine.arm()
+                    if store.canMeasure { engine.arm() }
                 } else if engine.autoResetRequested {
                     attemptSaveAndArm()
                 }
@@ -298,9 +348,9 @@ struct MeasureView: View {
             UIApplication.shared.isIdleTimerDisabled = true
             engine.bestTimes = bests
             recomputeMphBests()
-            // 計測は常に無料・無制限。idle なら待機開始（オンボーディング完了後のみ）。
+            // idle なら待機開始（オンボーディング完了 かつ 無料枠が残っている場合のみ）。
             if engine.state == .idle {
-                if onboardingDone { engine.arm() }
+                if onboardingDone && store.canMeasure { engine.arm() }
             } else {
                 engine.resumeSensors()               // .armed: GPS+Motion再開
                 engine.restartLocationIfFinished()   // .finished: GPS再開（停車検知のため）
@@ -353,13 +403,16 @@ struct MeasureView: View {
 
     var body: some View {
         measureStage1
-        // 購入完了（または起動時の権利確認）でペイウォールを閉じる。
+        // 購入完了（または起動時の権利確認）でペイウォールを閉じ、idle なら待機開始（解放直後の再開）。
         .onChange(of: store.isPurchased) { _, purchased in
-            if purchased { showPaywall = false }
+            if purchased {
+                showPaywall = false
+                if engine.state == .idle { engine.arm() }
+            }
         }
         // 事前アナウンス完了（許可ダイアログ後）→ idle なら待機開始。免責→アナウンス後にarmが初めて走る
         .onChange(of: hasSeenLocationPrimer) { _, seen in
-            if seen, engine.state == .idle { engine.arm() }
+            if seen, engine.state == .idle, store.canMeasure { engine.arm() }
         }
         .sheet(isPresented: $showPaywall) {
             PaywallView(store: store) { showPaywall = false }
@@ -713,7 +766,7 @@ struct MeasureView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     BigButton(label: "再計測", color: .blue) {
-                        engine.arm()
+                        if store.canMeasure { engine.arm() } else { showPaywall = true }
                     }
                 }
             }
@@ -815,7 +868,7 @@ struct MeasureView: View {
 
     /// 状態遷移に伴う動画録画ライフサイクル（プリロール/ロック/トリミング保存/破棄）。
     private func handleStateChange(_ oldState: MeasurementState, _ state: MeasurementState) {
-        if state == .idle { engine.arm() }
+        if state == .idle, store.canMeasure { engine.arm() }
         guard videoEnabled else { return }
         switch state {
         case .running:
@@ -885,7 +938,7 @@ struct MeasureView: View {
         case .active:
             UIApplication.shared.isIdleTimerDisabled = true
             if engine.state == .idle {
-                if onboardingDone { engine.arm() }
+                if onboardingDone && store.canMeasure { engine.arm() }
             } else {
                 engine.resumeSensors()
                 engine.restartLocationIfFinished()

@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// 結果カードの透かし除去を訴求する購入画面。買い切り（非消費型）で透かしを永久解除。
+/// 無制限計測への解放を訴求する購入画面。買い切り（非消費型）で計測の回数制限を永久解除。
 /// アプリの世界観に合わせたレーシング調・カラフルなエッジ演出で訴求する。
 struct PaywallView: View {
     let store: StoreManager
@@ -13,9 +13,9 @@ struct PaywallView: View {
     @State private var edgeAngle: Double = 0
 
     private static let features: [(String, LocalizedStringKey)] = [
-        ("rosette",             "結果カードの透かしを除去"),
-        ("square.and.arrow.up", "クリーンなカードを共有"),
-        ("chart.xyaxis.line",   "全記録のスプリット・グラフ・地図を保持")
+        ("infinity",          "計測を無制限に（回数制限なし）"),
+        ("bolt.fill",         "1日1回の制限を解除"),
+        ("checkmark.seal",    "一度の購入でずっと使える")
     ]
 
     var body: some View {
@@ -33,7 +33,7 @@ struct PaywallView: View {
                     closeButton
                     hero
                     VStack(spacing: 6) {
-                        Text("クリーンな結果カードを解放")
+                        Text("計測を無制限に解放")
                             .font(.system(size: 25, weight: .heavy, design: .rounded))
                             .foregroundStyle(.white)
                             .multilineTextAlignment(.center)
@@ -142,9 +142,9 @@ struct PaywallView: View {
                 if store.purchaseInFlight {
                     ProgressView().tint(.black)
                 } else if let price = store.displayPrice {
-                    Text("\(price) で透かしを解除")
+                    Text("\(price) で無制限に解放")
                 } else {
-                    Text("購入して透かしを解除")
+                    Text("購入して無制限に解放")
                 }
             }
             .font(.system(size: 18, weight: .heavy, design: .rounded))

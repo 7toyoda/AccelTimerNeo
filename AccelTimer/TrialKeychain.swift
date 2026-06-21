@@ -6,27 +6,38 @@ import Security
 /// （UserDefaults はアプリ削除で消えるのでトライアル管理には使えない）。
 enum TrialKeychain {
     private static let service = "com.acceltimer.app.AccelTimer.trial"
-    private static let account = "free_measurement_count"
+    private static let countAccount = "free_measurement_count"
+    private static let dayAccount = "last_free_day"
 
     /// 無料計測の累積使用回数。読み取り失敗時は 0。
     static var measurementCount: Int {
         get {
-            guard let data = read(),
+            guard let data = read(account: countAccount),
                   let str = String(data: data, encoding: .utf8),
                   let n = Int(str) else { return 0 }
             return n
         }
-        set { write(Data(String(newValue).utf8)) }
+        set { write(Data(String(newValue).utf8), account: countAccount) }
     }
 
-    private static func baseQuery() -> [String: Any] {
+    /// 累計枠を超えた後の「1日1回」用：最後に無料完走した日（"yyyy-MM-dd"）。未記録は空文字。
+    static var lastFreeDay: String {
+        get {
+            guard let data = read(account: dayAccount),
+                  let str = String(data: data, encoding: .utf8) else { return "" }
+            return str
+        }
+        set { write(Data(newValue.utf8), account: dayAccount) }
+    }
+
+    private static func baseQuery(account: String) -> [String: Any] {
         [kSecClass as String: kSecClassGenericPassword,
          kSecAttrService as String: service,
          kSecAttrAccount as String: account]
     }
 
-    private static func read() -> Data? {
-        var query = baseQuery()
+    private static func read(account: String) -> Data? {
+        var query = baseQuery(account: account)
         query[kSecReturnData as String] = true
         query[kSecMatchLimit as String] = kSecMatchLimitOne
         var item: CFTypeRef?
@@ -34,8 +45,8 @@ enum TrialKeychain {
         return item as? Data
     }
 
-    private static func write(_ data: Data) {
-        let query = baseQuery()
+    private static func write(_ data: Data, account: String) {
+        let query = baseQuery(account: account)
         // アクセシビリティ：初回アンロック以降は常に読めて、デバイス移行・再インストール後も残る
         let attributes: [String: Any] = [
             kSecValueData as String: data,

@@ -25,17 +25,28 @@ struct SettingsView: View {
                 Form {
                     Section("ライセンス") {
                         if store.isPurchased {
-                            Label("購入済み（透かし解除済み）", systemImage: "checkmark.seal.fill")
+                            Label("購入済み（無制限）", systemImage: "checkmark.seal.fill")
                                 .foregroundStyle(.green)
                         } else {
-                            Text("計測・履歴保存・カード共有は無料です。購入すると共有する結果カードから「体験版」の透かしを外せます。")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                            // いつでも購入して、共有カードの透かしを消せる。
+                            if store.trialExhausted {
+                                Text("無料体験（\(StoreManager.freeTrialLimit)回）を使い切りました。現在は1日1回まで無料で計測できます。買い切りで無制限になります。")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            } else {
+                                HStack {
+                                    Text("無料体験の残り")
+                                    Spacer()
+                                    Text("\(store.freeTrialRemaining) / \(StoreManager.freeTrialLimit) 回")
+                                        .foregroundStyle(.secondary)
+                                }
+                                Text("使い切ると1日1回まで無料。買い切りで無制限になります。")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
                             Button {
                                 showPaywall = true
                             } label: {
-                                Label("結果カードの透かしを消す（購入）", systemImage: "lock.open.fill")
+                                Label("無制限に解放（購入）", systemImage: "lock.open.fill")
                                     .foregroundStyle(.orange)
                             }
                             Button {
