@@ -335,11 +335,11 @@ struct MeasureView: View {
         .onChange(of: engine.confirmedStoppedWhileArmed) { _, stopped in
             if stopped { startPrerollIfNeeded() }
         }
-        // GPS精度に追従：待機中(ARMED)にGPS確認中(赤)へ落ちたら録画を止め、良好に戻れば再開。
-        // 録画をREADY表示と同じ条件に揃える。計測中(RUNNING)は止めない。
+        // GPS精度に追従：計測開始は赤精度では禁止するが、動画は停車確認済みなら回し続ける。
+        // 発進直前に一瞬赤へ落ちてもプリロールを失わないため。計測中(RUNNING)も止めない。
         .onChange(of: gpsIsRed) { _, red in
             if red {
-                if isVideoRecording && engine.state != .running {
+                if isVideoRecording && engine.state != .running && !engine.confirmedStoppedWhileArmed {
                     recorder.cancelAndDiscard()
                     isVideoRecording = false
                 }
@@ -872,9 +872,9 @@ struct MeasureView: View {
     /// READY/待機中のプリロール録画を開始（発進を頭から収録するため）。
     /// セッション未構築・録画中・計測中/完了中は開始しない（ARMEDの待機時のみ）。
     private func startPrerollIfNeeded() {
-        // 停車確認＋GPS良好（READYと同条件）で録画開始。GPS確認中(赤)はそもそも発進判定が
-        // 起きず、カメラを回すのはムダなので開始しない。待機中ずっと回さない＝省電力。
-        guard videoEnabled, videoSessionReady, !isVideoRecording, !gpsIsRed,
+        // 停車確認済みならGPS速度精度が一時的に赤でも録画を開始する。発進判定はTimerEngine側で
+        // speedAccuracy < 2.0 を要求するため、計測精度には影響しない。
+        guard videoEnabled, videoSessionReady, !isVideoRecording,
               engine.state == .armed, engine.confirmedStoppedWhileArmed else { return }
         let audioOK = videoAudioEnabled &&
             AVCaptureDevice.authorizationStatus(for: .audio) == .authorized

@@ -77,4 +77,11 @@ final class TimerEngineSplitTests: XCTestCase {
         XCTAssertTrue(TimerEngine.isFakeDopplerSpeed(speedKmh: 80.0, positionSpeedKmh: 5.0))
         XCTAssertFalse(TimerEngine.isFakeDopplerSpeed(speedKmh: 80.0, positionSpeedKmh: 45.0))
     }
+
+    /// 微速クリープの誤開始を避けるため、GPS発進トリガーは速度精度にかかわらず10km/h。
+    /// 実際のt=0はCoreMotionのlookBackで補正するため、開始時刻精度はここで落とさない。
+    func testLaunchThresholdIsTenKmh() {
+        XCTAssertEqual(TimerEngine.launchThresholdMs(speedAccuracyMs: 0.3), 10.0 / 3.6, accuracy: 1e-9)
+        XCTAssertEqual(TimerEngine.launchThresholdMs(speedAccuracyMs: 1.8), 10.0 / 3.6, accuracy: 1e-9)
+    }
 }

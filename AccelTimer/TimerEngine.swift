@@ -87,6 +87,9 @@ final class TimerEngine {
     // 【表示専用】発進直後（ARMED）の加速度補間推定値(km/h)とその作動フラグ。GPSが追いつくまでの0.0表示対策。
     private var armedLaunchKmh: Double = 0
     private var armedLaunchActive = false
+    // READY（停車確認済み）になった時刻。表示が成立した直後のGPSサンプルで
+    // いきなりRUNNINGへ入ると「READY前に開始」に見えるため、短い猶予を置く。
+    private var readySince: Date?
     // 100Hz表示補間用：GPS EMAを起点に加速度で外挿し、GPS更新ごとに再アンカー
     private var motionDisplayKmh: Double = 0
     // motion.timestamp（起動後経過秒）→ Date への変換オフセット（GPS 10Hz で更新してキャッシュ）
@@ -127,6 +130,10 @@ final class TimerEngine {
     private static let launchDisplayAccelMs2 = 2.0   // 0.2G。発進は容易に超え、アイドル振動(<0.3)は超えない
     private static let launchDisplayWindow   = 15    // ≈150ms（100Hz）
     private static let launchDisplayCapKmh   = 30.0  // 暴走防止の上限（トリガーは10km/h前後で発火しRUNNINGへ移行）
+    // GPS発進トリガーは10km/h以上に固定する。t=0はlookBackで戻すため、低速クリープの誤開始を
+    // 減らしながら発進時刻精度は維持する。
+    private static let launchTriggerKmh = 10.0
+    private static let readyHoldSec = 0.5
     // RUNNING 中にピーク速度からこの値(km/h)以上減速したら加速中断とみなし計測を破棄する。
     // 信号待ち・渋滞・巡航を挟んで 100 km/h に達する「水増し」計測を防止する。
     private static let decelAbortDropKmh   = 15.0
@@ -206,6 +213,12 @@ final class TimerEngine {
         return prev.time.addingTimeInterval(frac * curr.time.timeIntervalSince(prev.time))
     }
 
+    /// ARMED→RUNNING のGPS発進トリガー速度。速度精度が良い時でも微速クリープを拾わないよう
+    /// 10km/h固定にし、実際の発進点はCoreMotion lookBackで補正する。
+    nonisolated static func launchThresholdMs(speedAccuracyMs: Double) -> Double {
+        launchTriggerKmh / 3.6
+    }
+
     /// GPS Doppler が高速を示す一方で、同じサンプルで更新した位置ベース速度が大きく下回る場合は
     /// 停車中の速度グリッチとみなす。位置速度がまだ未確定なら判定しない。
     nonisolated static func isFakeDopplerSpeed(speedKmh: Double, positionSpeedKmh: Double?) -> Bool {
@@ -247,6 +260,7 @@ final class TimerEngine {
         let alreadyStopped = speedAcc > 0 && speedAcc < 2.0 && location.speedMs < stoppedThresholdMs
         resetState()
         confirmedStoppedWhileArmed = alreadyStopped
+        readySince = alreadyStopped ? Date() : nil
         state = .armed
         logger.start()
         logger.logEvent("ARMED", startTime: nil)
@@ -294,6 +308,7 @@ final class TimerEngine {
         ringBuffer.removeAll(keepingCapacity: true)
         lpfWindow.removeAll()
         confirmedStoppedWhileArmed = false
+        readySince = nil
         deviceSteadyWhileArmed = false
         location.startUpdating()
         motion.startUpdates()
@@ -454,6 +469,7 @@ final class TimerEngine {
                 // 精度不良期間に車が動いた可能性があるため停車確認をリセット
                 // Kalman のリセットは TOP セクションで実施済み
                 confirmedStoppedWhileArmed = false
+                readySince = nil
                 fusedSpeedKmh = 0
                 break
             }
@@ -478,6 +494,9 @@ final class TimerEngine {
             // sAcc >= 2.0（赤状態）での停車確認は信頼性が低いため受け付けない
             // min(..., 1.4): 精度不良時（sAcc=3.7 m/s など）の誤停車判定を防ぐ上限キャップ
             if speedAccuracyMs < 2.0 && speedMs < min(speedAccuracyMs, 1.4) {
+                if !confirmedStoppedWhileArmed {
+                    readySince = timestamp
+                }
                 confirmedStoppedWhileArmed = true
                 // 停車が確定＝偽発進推定（段差等）を解除して0へ戻す
                 armedLaunchActive = false
@@ -487,13 +506,16 @@ final class TimerEngine {
             // → ユーザーは再停車してGPS精度が改善するのを待つ必要がある
             if speedAccuracyMs >= 2.0 && speedMs > 1.4 {
                 confirmedStoppedWhileArmed = false
+                readySince = nil
             }
 
-            // 停車確認後、GPS精度ノイズを確実に上回る速度（最大10 km/h）で計測開始
-            let launchThresholdMs = min(10.0 / 3.6, max(5.0 / 3.6, speedAccuracyMs * 2.0))
+            // 停車確認後、低速クリープを拾わない10km/hで計測開始。
+            let launchThresholdMs = Self.launchThresholdMs(speedAccuracyMs: speedAccuracyMs)
+            let readyLongEnough = readySince.map { timestamp.timeIntervalSince($0) >= Self.readyHoldSec } ?? false
             // speedAccuracyMs < 2.0: UI の「GPS確認中（赤）」表示中は発進トリガーを禁止
             // hAcc<30 でも sAcc>=2.0 の場合（GPS起動直後）に計測が開始されるのを防ぐ
-            if confirmedStoppedWhileArmed && speedMs > launchThresholdMs && speedAccuracyMs < 2.0 && !dopplerLooksFake {
+            if confirmedStoppedWhileArmed && readyLongEnough && speedMs > launchThresholdMs
+                && speedAccuracyMs < 2.0 && !dopplerLooksFake {
                 let gpsFallback = interpolatedStartTime(
                     threshold: launchThresholdMs,
                     prevSpeed: lastGPSSpeedMs, prevTime: lastGPSTime,
@@ -978,6 +1000,7 @@ final class TimerEngine {
         finishPrevTargetTime = .distantPast
         armedLaunchKmh      = 0
         armedLaunchActive   = false
+        readySince          = nil
         motionToWallOffset  = 0
         ringBuffer.removeAll(keepingCapacity: true)
         lpfWindow.removeAll()

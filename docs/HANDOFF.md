@@ -5,7 +5,7 @@
 **変更前に該当箇所を読み、ここに書かれた意図的な設計を壊さないこと。** 記述と実
 コードが食い違う場合は実コードを正とし、本書を更新すること。
 
-最終更新時の状態: バージョン 0.1.48 系 / Swift 6 / SwiftUI / SwiftData / iOS 17+。
+最終更新時の状態: バージョン 0.1.49 系 / Swift 6 / SwiftUI / SwiftData / iOS 17+。
 リポジトリ: GitHub `toy0da/accel-timer`（main ブランチ運用）。
 
 ---
@@ -31,12 +31,16 @@
 
 ## 2. 発進検出（lookback と微速クリープ対策）
 
-- 発進トリガー条件: `confirmedStoppedWhileArmed && speedMs > launchThreshold &&
-  speedAccuracy < 2.0`。`launchThreshold = min(10, max(5, sAcc×2)) km/h`。
+- 発進トリガー条件: `confirmedStoppedWhileArmed && READY成立から0.5秒以上 &&
+  speedMs > launchThreshold && speedAccuracy < 2.0`。`launchThreshold = 10 km/h` 固定。
   **停車確認（GPS良好で速度≈0）が前提**。これは正常に効いている（実ログ全発進で成立）。
 - t=0 は `lookBackStartTime` でリングバッファの静止→加速の立ち上がり点へ遡って
   アンカー（高精度）。静止区間が無い（GPS遅延）場合は加速度から速度0時刻へ
   バックエクストラポレーション。
+- 2026-06-21 実走ログで 5〜9km/h の微速クリープが `START → FALSE_LAUNCH_ABORT` を
+  多発させ、画面がすぐ「停車してください」に戻ることを確認。t=0 はlookBackで戻るため、
+  GPSトリガーは10km/h固定へ引き上げた。READY表示をユーザーが認識できるよう、停車確認後
+  0.5秒の猶予も置く。
 - **微速クリープ誤発進対策（v0.1.28）**: 信号待ちの徐行（6.8km/h 等）でトリガーが
   誤発火し、徐行を含む水増し計測が完走記録される問題があった。**トリガー時の加速度
   では判別不可**（lookback が t=0 を加速前に固定するため、クリーン発進の直後加速度が
@@ -69,9 +73,10 @@
   設計）ため不整合だった。READY を実態に合わせ、端末固定の案内はサブ文言に降格。
   → 「READY が出ている時だけ計測/録画が動く」状態。**deviceSteady をトリガー必須
   条件にしない**のが意図（固定必須＝B案は不採用）。
-- **録画（プリロール）も同条件**: `startPrerollIfNeeded` のガードに `!gpsIsRed` を追加し、
-  GPS確認中(赤)では録画しない。待機中に赤へ落ちたら録画停止、回復で再開、RUNNING中は
-  止めない（`onChange(gpsIsRed)`）。
+- **録画（プリロール）は停車確認済みなら開始**: 計測開始は引き続き `speedAccuracy < 2.0`
+  を要求するが、動画は発進直前のGPS赤揺れで取りこぼさないよう `gpsIsRed` では止めない。
+  2026-06-21 実走ログで、停車確認済み→一時的な赤精度→直後に発進検知という流れで
+  動画が間に合わない可能性を確認したため。RUNNING中も止めない。
 
 ## 6. 参考値・手持ち検知
 
