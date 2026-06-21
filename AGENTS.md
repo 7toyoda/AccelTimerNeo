@@ -75,7 +75,7 @@ IDLE → ARMED → RUNNING → FINISHED
 ```
 
 - `IDLE`: 待機（`arm()` でセンサー起動し `ARMED` へ）
-- `ARMED`: 停車確認 → 発進待機。GPS で一度停車を確認後、発進しきい値（`min(10, max(5, sAcc×2))` km/h）超で `RUNNING` へ自動遷移
+- `ARMED`: 停車確認 → 発進待機。GPS で一度停車を確認し、READY成立から0.5秒以上経過後、GPS速度10km/h超（速度精度 `sAcc < 2.0`）で `RUNNING` へ自動遷移。t=0 は CoreMotion lookBack で発進点へ補正する
 - `RUNNING`: 計測中。100 km/h 到達で自動停止 → `FINISHED`。大幅減速（ピークから 15 km/h 超ダウン）を検知すると計測を破棄して `ARMED` へ戻る
 - 遷移ロジックは `TimerEngine` (`MeasurementState` enum) に集約
 

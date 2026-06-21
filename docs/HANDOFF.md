@@ -5,7 +5,7 @@
 **変更前に該当箇所を読み、ここに書かれた意図的な設計を壊さないこと。** 記述と実
 コードが食い違う場合は実コードを正とし、本書を更新すること。
 
-最終更新時の状態: バージョン 0.1.49 系 / Swift 6 / SwiftUI / SwiftData / iOS 17+。
+最終更新時の状態: バージョン 0.1.50 系 / Swift 6 / SwiftUI / SwiftData / iOS 17+。
 リポジトリ: GitHub `toy0da/accel-timer`（main ブランチ運用）。
 
 ---
@@ -129,7 +129,11 @@
   オーバーレイ描画は UIKit 非依存（CoreText/CoreGraphics）。
 - **常時デバッグログ**: `DebugLogger` が `Documents/debug/debug.csv` に GPS/状態を追記
   （計測保存と独立）。未トリガー調査用。計測ログは `MeasurementLogger`（GPS/MOTION/
-  EVENT を CSV）。
+  EVENT を CSV）。動画録画は `VIDEO_SETUP_REQUEST` / `VIDEO_SESSION_READY` /
+  `VIDEO_PREROLL_START` / `VIDEO_LOCK_FOR_RUN` / `VIDEO_SAVE_START_TRIMMED` /
+  `VIDEO_SAVED` / `VIDEO_ATTACHED` / `VIDEO_ERROR` / 各種 `VIDEO_DISCARD_*` を
+  debug.csv の event 欄へ記録し、録画ON/権限/プリロール/保存/破棄のどこで止まったか
+  追跡できるようにしている。
 - 履歴は `TimerEngine.trimHistory` がリーダーボード方式（日付順30＋各速度帯上位10の
   和集合、実質30〜70件）。履歴の「並びごと除外」フラグ `hiddenFromDate/Time`。
 

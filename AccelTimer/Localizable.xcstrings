@@ -2381,30 +2381,30 @@
         }
       }
     },
-    "発進を検知して自動スタート（5〜10 km/h）" : {
+    "発進を検知して自動スタート（10 km/h前後）" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Auto-starts on launch detection (5–10 km/h)"
+            "value" : "Auto-starts on launch detection (around 10 km/h)"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "発進を検知して自動スタート（5〜10 km/h）"
+            "value" : "発進を検知して自動スタート（10 km/h前後）"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "출발을 감지하여 자동 시작 (5~10 km/h)"
+            "value" : "출발을 감지하여 자동 시작 (약 10 km/h)"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "检测到起步后自动开始（5–10 km/h）"
+            "value" : "检测到起步后自动开始（约 10 km/h）"
           }
         }
       }

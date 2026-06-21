@@ -153,6 +153,7 @@ struct MeasureView: View {
     private func discardCurrentVideo() {
         recordingStopTask?.cancel()
         recordingStopTask = nil
+        logVideoEvent("VIDEO_DISCARD_CURRENT")
         recorder.cancelAndDiscard()
         isVideoRecording = false
     }
@@ -340,6 +341,7 @@ struct MeasureView: View {
         .onChange(of: gpsIsRed) { _, red in
             if red {
                 if isVideoRecording && engine.state != .running && !engine.confirmedStoppedWhileArmed {
+                    logVideoEvent("VIDEO_DISCARD_GPS_RED_NOT_READY")
                     recorder.cancelAndDiscard()
                     isVideoRecording = false
                 }
@@ -376,6 +378,7 @@ struct MeasureView: View {
             if enabled {
                 setupVideoRecorder()
             } else {
+                logVideoEvent("VIDEO_DISABLED")
                 recorder.cancelAndDiscard()
                 isVideoRecording = false
                 videoSessionReady = false
@@ -384,6 +387,7 @@ struct MeasureView: View {
         }
         .onChange(of: videoAudioEnabled) { _, _ in
             guard videoEnabled else { return }
+            logVideoEvent("VIDEO_AUDIO_SETTING_CHANGED")
             recorder.cancelAndDiscard()
             isVideoRecording = false
             videoSessionReady = false
@@ -399,6 +403,7 @@ struct MeasureView: View {
             if engine.state == .running {
                 // 計測中のバックグラウンド移行: CoreMotion が停止して精度不足になるため中止
                 // onChange(.armed) が stopVideoRecordingIfNeeded を呼ぶ前に isVideoRecording を落とす
+                logVideoEvent("VIDEO_DISCARD_VIEW_DISAPPEAR_RUNNING")
                 recorder.cancelAndDiscard()
                 isVideoRecording = false
                 engine.abortRunDueToBackground()  // state → .armed
@@ -407,6 +412,7 @@ struct MeasureView: View {
                 stopVideoRecordingIfNeeded()
                 engine.pauseLocationIfFinished()  // GPS停止でバッテリー節約
             } else {
+                logVideoEvent("VIDEO_DISCARD_VIEW_DISAPPEAR")
                 recorder.cancelAndDiscard()
                 isVideoRecording = false
             }
@@ -499,6 +505,14 @@ struct MeasureView: View {
                         .font(.caption2.bold())
                         .foregroundStyle(.red)
                 }
+            } else if videoEnabled {
+                HStack(spacing: 4) {
+                    Image(systemName: videoSessionReady ? "video.fill" : "video.slash")
+                        .font(.caption2.bold())
+                    Text(videoSessionReady ? "VIDEO READY" : "CAM...")
+                        .font(.caption2.bold())
+                }
+                .foregroundStyle(videoSessionReady ? .green : .orange)
             }
             Text(stateLabel)
                 .font(.caption2)
@@ -743,10 +757,15 @@ struct MeasureView: View {
     // MARK: Helpers
 
     private func setupVideoRecorder() {
-        guard videoEnabled else { return }
+        guard videoEnabled else {
+            logVideoEvent("VIDEO_SETUP_SKIPPED_DISABLED")
+            return
+        }
+        logVideoEvent("VIDEO_SETUP_REQUEST audio=\(videoAudioEnabled ? 1 : 0)")
         Task {
             let videoGranted = await VideoRecorder.requestAccess(for: .video)
             guard videoGranted else {
+                logVideoEvent("VIDEO_PERMISSION_DENIED_CAMERA")
                 videoErrorMessage = String(localized: "カメラへのアクセスが拒否されています。設定アプリから許可してください。")
                 return
             }
@@ -754,19 +773,26 @@ struct MeasureView: View {
             if videoAudioEnabled {
                 audioGranted = await VideoRecorder.requestAccess(for: .audio)
                 if !audioGranted {
+                    logVideoEvent("VIDEO_PERMISSION_DENIED_MIC")
                     videoErrorMessage = String(localized: "マイクへのアクセスが拒否されています。音声なしで録画します。")
                 }
             }
+            logVideoEvent("VIDEO_PERMISSION_OK audio=\(audioGranted ? 1 : 0)")
             recorder.onSaved = { filename in
+                logVideoEvent("VIDEO_SAVED file=\(filename)")
                 // records は値キャプチャのため古くなる。常に pendingVideoFileName 経由で解決する
                 pendingVideoFileName = filename
                 videoSavedToast = true
                 Task { try? await Task.sleep(for: .seconds(3)); videoSavedToast = false }
             }
-            recorder.onError = { msg in videoErrorMessage = msg }
+            recorder.onError = { msg in
+                logVideoEvent("VIDEO_ERROR \(msg.replacingOccurrences(of: ",", with: " "))")
+                videoErrorMessage = msg
+            }
             recorder.onReady = {
                 // カメラ構築完了 → ARMED待機中ならプリロール録画を開始
                 videoSessionReady = true
+                logVideoEvent("VIDEO_SESSION_READY")
                 startPrerollIfNeeded()
             }
             recorder.prepareSession(withAudio: audioGranted)
@@ -776,12 +802,17 @@ struct MeasureView: View {
     private func stopVideoRecordingIfNeeded() {
         recordingStopTask?.cancel()
         recordingStopTask = nil
-        guard isVideoRecording else { return }
+        guard isVideoRecording else {
+            logVideoEvent("VIDEO_STOP_SKIPPED_NOT_RECORDING")
+            return
+        }
         if recorder.recordedPeakKmh >= 40 {
             // 発進点(runLaunchTime)の0.5秒前へトリミングして保存。マッチ用アンカーも発進点に。
             recordingStartDate = runLaunchTime
+            logVideoEvent("VIDEO_SAVE_START_TRIMMED peak=\(String(format: "%.1f", recorder.recordedPeakKmh))")
             recorder.stopAndSaveTrimmed(launchWall: runLaunchTime, leadIn: 0.5)
         } else {
+            logVideoEvent("VIDEO_DISCARD_LOW_PEAK peak=\(String(format: "%.1f", recorder.recordedPeakKmh))")
             recorder.cancelAndDiscard()
         }
         isVideoRecording = false
@@ -797,6 +828,7 @@ struct MeasureView: View {
             recordingStopTask?.cancel()
             recordingStopTask = nil
             runLaunchTime = engine.runStartTime
+            logVideoEvent("VIDEO_LOCK_FOR_RUN recording=\(isVideoRecording ? 1 : 0)")
             recorder.lockForRun()
             recorder.recordedPeakKmh = 0
         case .finished:
@@ -804,6 +836,7 @@ struct MeasureView: View {
             recordingStopTask = Task {
                 try? await Task.sleep(for: .seconds(10))
                 guard !Task.isCancelled else { return }
+                logVideoEvent("VIDEO_SAVE_TIMEOUT")
                 stopVideoRecordingIfNeeded()
             }
         case .armed:
@@ -811,6 +844,7 @@ struct MeasureView: View {
             recordingStopTask = nil
             if oldState == .running {
                 // RUNNING→ARMED は計測中断（減速/偽発進等）。レコードが残らないので破棄。
+                logVideoEvent("VIDEO_DISCARD_RUN_ABORT")
                 recorder.cancelAndDiscard()
                 isVideoRecording = false
             } else if oldState == .finished {
@@ -825,6 +859,7 @@ struct MeasureView: View {
             // キャンセル/ペイウォール等で待機解除 → プリロール録画を停止（電池節約）
             recordingStopTask?.cancel()
             recordingStopTask = nil
+            logVideoEvent("VIDEO_DISCARD_IDLE")
             recorder.cancelAndDiscard()
             isVideoRecording = false
         }
@@ -839,10 +874,12 @@ struct MeasureView: View {
             UIApplication.shared.isIdleTimerDisabled = false
             if engine.state == .running {
                 // 計測中にロック/背面化 → CoreMotionが止まり精度不足になるため中止（復帰時トースト）
+                logVideoEvent("VIDEO_DISCARD_BACKGROUND_RUNNING")
                 recorder.cancelAndDiscard()
                 isVideoRecording = false
                 engine.abortRunDueToBackground()
             } else {
+                logVideoEvent("VIDEO_DISCARD_BACKGROUND")
                 recorder.cancelAndDiscard()
                 isVideoRecording = false
                 engine.pauseSensors()
@@ -875,9 +912,15 @@ struct MeasureView: View {
         // 停車確認済みならGPS速度精度が一時的に赤でも録画を開始する。発進判定はTimerEngine側で
         // speedAccuracy < 2.0 を要求するため、計測精度には影響しない。
         guard videoEnabled, videoSessionReady, !isVideoRecording,
-              engine.state == .armed, engine.confirmedStoppedWhileArmed else { return }
+              engine.state == .armed, engine.confirmedStoppedWhileArmed else {
+            if videoEnabled {
+                logVideoEvent("VIDEO_PREROLL_SKIP ready=\(videoSessionReady ? 1 : 0) recording=\(isVideoRecording ? 1 : 0) state=\(stateLabel) stopped=\(engine.confirmedStoppedWhileArmed ? 1 : 0)")
+            }
+            return
+        }
         let audioOK = videoAudioEnabled &&
             AVCaptureDevice.authorizationStatus(for: .audio) == .authorized
+        logVideoEvent("VIDEO_PREROLL_START audio=\(audioOK ? 1 : 0) gpsRed=\(gpsIsRed ? 1 : 0)")
         recorder.startRecording(audio: audioOK, rotationAngle: currentVideoRotationAngle)
         recorder.recordedPeakKmh = 0
         isVideoRecording = true
@@ -912,8 +955,13 @@ struct MeasureView: View {
             .min { $0.date < $1.date }
         guard let record = target else { return }
         record.videoFileName = filename
+        logVideoEvent("VIDEO_ATTACHED file=\(filename)")
         pendingVideoFileName = nil
         recordingStartDate = nil
+    }
+
+    private func logVideoEvent(_ event: String) {
+        DebugLogger.shared.logEvent(event, state: debugStateLabel)
     }
 
     private var currentVideoRotationAngle: CGFloat {
@@ -942,7 +990,7 @@ struct MeasureView: View {
         if engine.state == .armed && !engine.deviceSteadyWhileArmed {
             return String(localized: "端末を車体に固定すると高精度で計測できます")
         }
-        return String(localized: "発進を検知して自動スタート（5〜10 km/h）")
+        return String(localized: "発進を検知して自動スタート（10 km/h前後）")
     }
 
     // 速度精度（Doppler speedAccuracy, m/s）でインジケーターを判定
@@ -972,6 +1020,15 @@ struct MeasureView: View {
         case .armed:    return String(localized: "スタート待機中")
         case .running:  return String(localized: "計測中")
         case .finished: return String(localized: "完了")
+        }
+    }
+
+    private var debugStateLabel: String {
+        switch engine.state {
+        case .idle:     return "IDLE"
+        case .armed:    return "ARMED"
+        case .running:  return "RUNNING"
+        case .finished: return "FINISHED"
         }
     }
 

@@ -77,11 +77,19 @@ struct SettingsView: View {
                         Text("計測開始から完了まで後方カメラで録画し、速度・タイムをオーバーレイしてアプリ内に保存します。履歴詳細から再生できます")
                             .font(.caption)
                             .foregroundStyle(.secondary)
+                        LabeledContent("カメラ") {
+                            Text(cameraPermissionText)
+                                .foregroundStyle(cameraPermissionColor)
+                        }
                         if videoEnabled {
                             Toggle("走行音を録音", isOn: $audioEnabled)
                             Text("走行音を動画に収録します")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
+                            LabeledContent("マイク") {
+                                Text(microphonePermissionText)
+                                    .foregroundStyle(microphonePermissionColor)
+                            }
                         }
                     }
                     Section("アプリ情報") {
@@ -142,6 +150,40 @@ struct SettingsView: View {
             Button("OK", role: .cancel) {}
         } message: {
             Text("走行音の録音にはマイクの許可が必要です。設定アプリの AccelTimer でマイクをオンにしてください。音声なしでの動画録画は可能です。")
+        }
+    }
+
+    private var cameraPermissionText: String {
+        permissionText(for: AVCaptureDevice.authorizationStatus(for: .video))
+    }
+
+    private var cameraPermissionColor: Color {
+        permissionColor(for: AVCaptureDevice.authorizationStatus(for: .video))
+    }
+
+    private var microphonePermissionText: String {
+        permissionText(for: AVCaptureDevice.authorizationStatus(for: .audio))
+    }
+
+    private var microphonePermissionColor: Color {
+        permissionColor(for: AVCaptureDevice.authorizationStatus(for: .audio))
+    }
+
+    private func permissionText(for status: AVAuthorizationStatus) -> String {
+        switch status {
+        case .authorized: return "許可済み"
+        case .notDetermined: return "未確認"
+        case .denied, .restricted: return "許可なし"
+        @unknown default: return "不明"
+        }
+    }
+
+    private func permissionColor(for status: AVAuthorizationStatus) -> Color {
+        switch status {
+        case .authorized: return .green
+        case .notDetermined: return .orange
+        case .denied, .restricted: return .red
+        @unknown default: return .secondary
         }
     }
 }
