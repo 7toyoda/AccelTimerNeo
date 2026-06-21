@@ -129,10 +129,10 @@ final class TimerEngine {
     // launchDisplayAccelMs2 以上の時だけ作動。計測のトリガー/スプリット/Kalman/ピークには一切不使用。
     private static let launchDisplayAccelMs2 = 2.0   // 0.2G。発進は容易に超え、アイドル振動(<0.3)は超えない
     private static let launchDisplayWindow   = 15    // ≈150ms（100Hz）
-    private static let launchDisplayCapKmh   = 30.0  // 暴走防止の上限（トリガーは10km/h前後で発火しRUNNINGへ移行）
-    // GPS発進トリガーは10km/h以上に固定する。t=0はlookBackで戻すため、低速クリープの誤開始を
+    private static let launchDisplayCapKmh   = 30.0  // 暴走防止の上限（トリガーは13km/h前後で発火しRUNNINGへ移行）
+    // GPS発進トリガーは13km/h以上。t=0はlookBackで戻すため、低速クリープの誤開始を
     // 減らしながら発進時刻精度は維持する。
-    private static let launchTriggerKmh = 10.0
+    private static let launchTriggerKmh = 13.0
     private static let readyHoldSec = 0.5
     // RUNNING 中にピーク速度からこの値(km/h)以上減速したら加速中断とみなし計測を破棄する。
     // 信号待ち・渋滞・巡航を挟んで 100 km/h に達する「水増し」計測を防止する。
@@ -207,8 +207,16 @@ final class TimerEngine {
     static let stoppedSpeedFloorMs = 1.0
     static let stoppedSpeedCapMs = 1.4
     /// sAcc(m/s) に応じた停車しきい値(m/s)。floor..cap にクランプ。
-    static func stoppedThresholdMs(speedAccMs: Double) -> Double {
+    nonisolated static func stoppedThresholdMs(speedAccMs: Double) -> Double {
         max(stoppedSpeedFloorMs, min(speedAccMs, stoppedSpeedCapMs))
+    }
+
+    /// Doppler速度だけで停車確認できるか。水平精度(hAcc)は座標品質であり、
+    /// Doppler速度精度(sAcc)が良好なら停車判定には使わない。
+    nonisolated static func shouldConfirmStopped(speedMs: Double, speedAccuracyMs: Double) -> Bool {
+        speedAccuracyMs >= 0
+        && speedAccuracyMs < 2.0
+        && speedMs < stoppedThresholdMs(speedAccMs: speedAccuracyMs)
     }
 
     /// 速度しきい値クロス時刻を線形補間で算出する純粋関数（テスト対象）。
@@ -225,7 +233,7 @@ final class TimerEngine {
     }
 
     /// ARMED→RUNNING のGPS発進トリガー速度。速度精度が良い時でも微速クリープを拾わないよう
-    /// 10km/h固定にし、実際の発進点はCoreMotion lookBackで補正する。
+    /// 13km/h固定にし、実際の発進点はCoreMotion lookBackで補正する。
     nonisolated static func launchThresholdMs(speedAccuracyMs: Double) -> Double {
         launchTriggerKmh / 3.6
     }
@@ -476,14 +484,6 @@ final class TimerEngine {
 
         switch state {
         case .armed:
-            guard hAcc >= 0, hAcc < 30 else {
-                // 精度不良期間に車が動いた可能性があるため停車確認をリセット
-                // Kalman のリセットは TOP セクションで実施済み
-                confirmedStoppedWhileArmed = false
-                readySince = nil
-                fusedSpeedKmh = 0
-                break
-            }
             // ARMED 状態の表示は GPS 速度を直接使う（Kalman は表示に使わない）
             // Kalman は加速度計ノイズでドリフトして偽速度（7〜9 km/h）を示すことがあるため
             // 速度精度が赤(sAcc>=2.0)の時は生GPSがグリッチ(突然112km/h等)を起こすので表示しない。
@@ -501,10 +501,10 @@ final class TimerEngine {
                 fusedSpeedKmh = max(fusedSpeedKmh, armedLaunchKmh)
             }
 
-            // GPS速度精度が良好（sAcc < 2.0）かつ速度が停車しきい値以内 → 停車確認
-            // sAcc >= 2.0（赤状態）での停車確認は信頼性が低いため受け付けない
+            // GPS速度精度が良好（sAcc < 2.0）かつ速度が停車しきい値以内 → 停車確認。
+            // hAcc は座標品質なので、Doppler速度が信頼できる時の停車確認には使わない。
             // しきい値は floor(1.0m/s)..cap(1.4m/s)。floorが無いと精度良好時に駐車中GPS揺らぎで停車不成立
-            if speedAccuracyMs < 2.0 && speedMs < Self.stoppedThresholdMs(speedAccMs: speedAccuracyMs) {
+            if Self.shouldConfirmStopped(speedMs: speedMs, speedAccuracyMs: speedAccuracyMs) {
                 if !confirmedStoppedWhileArmed {
                     readySince = timestamp
                 }
@@ -519,15 +519,7 @@ final class TimerEngine {
                 confirmedStoppedWhileArmed = false
                 readySince = nil
             }
-            // 良好GPSで「明確に走行中」（発進しきい値10km/hを十分超える15km/h超）なら停車ラッチを解除。
-            // ラッチが残ったまま走行してREADY表示・誤トリガーするのを防ぐ（通常発進は10km/hで
-            // 既にRUNNINGへ遷移するため、この解除は正常な発進検知を妨げない）。
-            if armedSpeedAccGood && speedKmh > 15.0 {
-                confirmedStoppedWhileArmed = false
-                readySince = nil
-            }
-
-            // 停車確認後、低速クリープを拾わない10km/hで計測開始。
+            // 停車確認後、低速クリープを拾わない13km/hで計測開始。
             let launchThresholdMs = Self.launchThresholdMs(speedAccuracyMs: speedAccuracyMs)
             let readyLongEnough = readySince.map { timestamp.timeIntervalSince($0) >= Self.readyHoldSec } ?? false
             // speedAccuracyMs < 2.0: UI の「GPS確認中（赤）」表示中は発進トリガーを禁止
@@ -551,6 +543,12 @@ final class TimerEngine {
                     checkSplits(prev: (lastGPSSpeedMs, lastGPSTime),
                                 curr: (speedMs, timestamp), source: "GPS")
                 }
+            }
+            // ここまででRUNNINGに入らなかったのに明確に動いているなら、停車ラッチを解除する。
+            // 発進検知の機会を先に与えることで、通常の0発進を取りこぼさず、走行中READYだけを防ぐ。
+            if state == .armed && armedSpeedAccGood && speedKmh > 15.0 {
+                confirmedStoppedWhileArmed = false
+                readySince = nil
             }
 
         case .running:

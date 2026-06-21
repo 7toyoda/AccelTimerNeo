@@ -5,16 +5,17 @@
 **変更前に該当箇所を読み、ここに書かれた意図的な設計を壊さないこと。** 記述と実
 コードが食い違う場合は実コードを正とし、本書を更新すること。
 
-最終更新時の状態: バージョン 0.1.61 系 / Swift 6 / SwiftUI / SwiftData / iOS 17+。
+最終更新時の状態: バージョン 0.1.64 系 / Swift 6 / SwiftUI / SwiftData / iOS 17+。
 リポジトリ: GitHub `toy0da/accel-timer`（private・main ブランチ運用）。
 作業コピーは dev（`/Users/user01/dev/AccelTimer`・Xcode用）と Codex（`work/accel-timer`）の
 2つ。push したら両者を同期する（dev で push → Codex 側を `git pull --ff-only`）。
 
-**このセッション（〜v0.1.61）の主な変更:** ①課金を透かしモデル→トライアル課金へ全面変更
+**このセッション（〜v0.1.64）の主な変更:** ①課金を透かしモデル→トライアル課金へ全面変更
 （§7）。②停車確認しきい値に下限を追加し「停車してください」頻発を解消（§2, v0.1.58）。
 ③mph 単位対応（§10）。④バージョンを xcconfig に集約（§13）。⑤ログの wall_time を端末
 ローカル時刻に統一（§14, v0.1.60）。⑥検証用に「トライアルリセット」「診断ログ ZIP 共有」
-を `#if DEBUG` で追加（§10/§12）。
+を `#if DEBUG` で追加（§10/§12）。⑦ARMED表示と低速誤発進を再調整し、5〜10km/hの徐行や
+hAcc悪化時の「停車してください」連発を抑制（§2/§5, v0.1.64）。
 
 ---
 
@@ -40,7 +41,7 @@
 ## 2. 発進検出（lookback と微速クリープ対策）
 
 - 発進トリガー条件: `confirmedStoppedWhileArmed && READY成立から0.5秒以上 &&
-  speedMs > launchThreshold && speedAccuracy < 2.0`。`launchThreshold = 10 km/h` 固定。
+  speedMs > launchThreshold && speedAccuracy < 2.0`。`launchThreshold = 13 km/h` 固定。
   **停車確認（GPS良好で速度≈0）が前提**。
 - **停車確認しきい値の下限（v0.1.58・重要修正）**: 停車判定は
   `TimerEngine.stoppedThresholdMs(speedAccMs:) = max(1.0, min(sAcc, 1.4))` m/s
@@ -50,9 +51,14 @@
   永遠に停車確認できず「停車してください」が消えない**バグがあった（2026-06-21 実走ログで
   確認）。下限 1.0m/s で吸収。発進トリガー(>10km/h)・上限(1.4)は不変なので誤停車・発進検知へ
   の影響なし。実ログ検証: 修正後は「実停車(speed<3.6km/h)＋GPS良好」で停車確認失敗ゼロ。
+- 停車確認は **Doppler速度精度(sAcc)とDoppler速度** で判定する。水平精度(hAcc)は座標品質であり、
+  sAccが良好で速度が停車しきい値内なら、hAccが一時的に30m超でも停車確認を成立させる。
+  2026-06-21 23時台ログで、実停車(speed≈0, sAcc≈0.3)なのに hAcc≈43m のため
+  `confirmedStopped=false` が続き「停車してください」が出続けたため修正。
 - 発進検知が高速(13-18km/h)で出るのは GPS ~1Hz 更新の遅延（t=0 は lookBack 補正で正確）。
   渋滞クリープで誤発進→即 FALSE_LAUNCH_ABORT が出やすいのは仕様（下記フェイルセーフが除去）。
-  「もっとトリガーを鈍く（10→13-15km/h, READY保持0.5→1.0秒）」はユーザー保留中の任意改善。
+  v0.1.64でトリガーを10→13km/hへ引き上げ、5〜10km/hの徐行で `START → FALSE_LAUNCH_ABORT`
+  になる頻度を下げた。t=0はCoreMotion lookBackで戻すため開始時刻精度は維持する。
 - t=0 は `lookBackStartTime` でリングバッファの静止→加速の立ち上がり点へ遡って
   アンカー（高精度）。静止区間が無い（GPS遅延）場合は加速度から速度0時刻へ
   バックエクストラポレーション。
@@ -92,6 +98,10 @@
   設計）ため不整合だった。READY を実態に合わせ、端末固定の案内はサブ文言に降格。
   → 「READY が出ている時だけ計測/録画が動く」状態。**deviceSteady をトリガー必須
   条件にしない**のが意図（固定必須＝B案は不採用）。
+- **v0.1.64 ARMED表示**: READYは `confirmedStoppedWhileArmed && displaySpeed < 2km/h` の実停車に限定。
+  `displaySpeed >= 3km/h` は「走行中」とし、5〜10km/hの徐行で命令口調の「停車してください」を
+  出さない。停車確認待ちは「停止確認中」に変更。計測トリガーとは別のUI分類であり、精度ロジック
+  そのものを緩める目的ではない。
 - **録画（プリロール）は停車確認済みなら開始**: 計測開始は引き続き `speedAccuracy < 2.0`
   を要求するが、動画は発進直前のGPS赤揺れで取りこぼさないよう `gpsIsRed` では止めない。
   2026-06-21 実走ログで、停車確認済み→一時的な赤精度→直後に発進検知という流れで

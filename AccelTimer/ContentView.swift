@@ -699,14 +699,14 @@ struct MeasureView: View {
                         .opacity(readyPulse ? 1.0 : 0.55)
                         .scaleEffect(readyPulse ? 1.04 : 1.0)
                 } else if armedDisplay == .driving {
-                    // 明確に走行中：急かさない控えめ表示（流し運転中の「停車してください」連発を防ぐ）
+                    // 走行中：急かさない控えめ表示（流し運転中の停止催促を防ぐ）
                     Text("走行中")
                         .font(.system(size: 34, weight: .bold, design: .rounded))
                         .foregroundStyle(.secondary)
                 } else {
-                    // 低速・未停車：完全停止を促す
-                    Text("停車してください")
-                        .font(.system(size: 40, weight: .black, design: .rounded))
+                    // 低速・未停車または停車確認待ち。命令口調の大表示にしない。
+                    Text("停止確認中")
+                        .font(.system(size: 36, weight: .black, design: .rounded))
                         .foregroundStyle(.orange)
                         .opacity(gpsPulse ? 1.0 : 0.5)
                 }
@@ -1023,14 +1023,14 @@ struct MeasureView: View {
         return spd < 0 || spd >= 2.0
     }
 
-    // ARMED 表示の3状態。READY=実停車、driving=走行中（急かさない）、stopPlease=低速・要停車。
+    // ARMED 表示の3状態。READY=実停車、driving=走行中（急かさない）、stopPlease=停車確認待ち。
     private enum ArmedDisplay { case ready, driving, stopPlease }
     private var armedDisplay: ArmedDisplay {
         let v = engine.displaySpeedKmh
-        // 実際に停車（≈0）かつ停車確認済みのときだけ READY（ラッチが残っていても走行中はREADYにしない）
-        if engine.confirmedStoppedWhileArmed && v < 5.0 { return .ready }
-        // 発進しきい値(10km/h)以上で動いている＝明確に走行中。急かさない
-        if v >= 10.0 { return .driving }
+        // 実停車に近い速度だけ READY。5km/h前後のクリープではREADYを出さない。
+        if engine.confirmedStoppedWhileArmed && v < 2.0 { return .ready }
+        // 3km/h以上で動いているなら、停止を急かさず走行中として扱う。
+        if v >= 3.0 { return .driving }
         return .stopPlease
     }
 
@@ -1045,7 +1045,7 @@ struct MeasureView: View {
         case .driving:
             return String(localized: "停車すると計測できます")
         case .stopPlease:
-            return String(localized: "完全停止でREADY状態になります")
+            return String(localized: "停止を確認しています")
         }
     }
 

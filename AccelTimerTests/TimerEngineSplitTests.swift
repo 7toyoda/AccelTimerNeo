@@ -78,10 +78,18 @@ final class TimerEngineSplitTests: XCTestCase {
         XCTAssertFalse(TimerEngine.isFakeDopplerSpeed(speedKmh: 80.0, positionSpeedKmh: 45.0))
     }
 
-    /// 微速クリープの誤開始を避けるため、GPS発進トリガーは速度精度にかかわらず10km/h。
+    /// 微速クリープの誤開始を避けるため、GPS発進トリガーは速度精度にかかわらず13km/h。
     /// 実際のt=0はCoreMotionのlookBackで補正するため、開始時刻精度はここで落とさない。
-    func testLaunchThresholdIsTenKmh() {
-        XCTAssertEqual(TimerEngine.launchThresholdMs(speedAccuracyMs: 0.3), 10.0 / 3.6, accuracy: 1e-9)
-        XCTAssertEqual(TimerEngine.launchThresholdMs(speedAccuracyMs: 1.8), 10.0 / 3.6, accuracy: 1e-9)
+    func testLaunchThresholdIsThirteenKmh() {
+        XCTAssertEqual(TimerEngine.launchThresholdMs(speedAccuracyMs: 0.3), 13.0 / 3.6, accuracy: 1e-9)
+        XCTAssertEqual(TimerEngine.launchThresholdMs(speedAccuracyMs: 1.8), 13.0 / 3.6, accuracy: 1e-9)
+    }
+
+    /// 停車確認はDoppler速度精度で判定する。水平精度は座標品質なのでここでは使わない。
+    func testStoppedConfirmationUsesDopplerSpeedAccuracy() {
+        XCTAssertTrue(TimerEngine.shouldConfirmStopped(speedMs: 0.0, speedAccuracyMs: 0.31))
+        XCTAssertTrue(TimerEngine.shouldConfirmStopped(speedMs: 0.9, speedAccuracyMs: 0.31))
+        XCTAssertFalse(TimerEngine.shouldConfirmStopped(speedMs: 1.2, speedAccuracyMs: 0.31))
+        XCTAssertFalse(TimerEngine.shouldConfirmStopped(speedMs: 0.0, speedAccuracyMs: 2.0))
     }
 }
