@@ -53,6 +53,16 @@ final class StoreManager {
         TrialKeychain.lastFreeDay = lastFreeDay
     }
 
+#if DEBUG
+    /// 検証用：トライアルのカウント/日付をリセットする（DEBUG ビルドのみ）。
+    func resetTrial() {
+        trialCount = 0
+        TrialKeychain.measurementCount = 0
+        lastFreeDay = ""
+        TrialKeychain.lastFreeDay = ""
+    }
+#endif
+
     init() {
         // App Store 外（他デバイスでの購入・返金など）からのトランザクション更新を監視
         Task { [weak self] in

@@ -115,6 +115,26 @@ struct SettingsView: View {
                         Button("安全運転と免責事項") { showDisclaimer = true }
                             .foregroundStyle(.white)
                     }
+#if DEBUG
+                    Section("検証用（DEBUGビルドのみ）") {
+                        HStack {
+                            Text("無料枠 累計")
+                            Spacer()
+                            Text("\(store.trialCount) 回・本日\(store.freeUsedToday ? "使用済み" : "未使用")")
+                                .foregroundStyle(.secondary)
+                        }
+                        Button(role: .destructive) {
+                            store.resetTrial()
+                        } label: {
+                            Label("トライアルをリセット", systemImage: "arrow.counterclockwise")
+                        }
+                        Button {
+                            showPaywall = true
+                        } label: {
+                            Label("購入画面を表示", systemImage: "creditcard")
+                        }
+                    }
+#endif
                 }
                 .scrollContentBackground(.hidden)
             }
