@@ -92,4 +92,40 @@ final class TimerEngineSplitTests: XCTestCase {
         XCTAssertFalse(TimerEngine.shouldConfirmStopped(speedMs: 1.2, speedAccuracyMs: 0.31))
         XCTAssertFalse(TimerEngine.shouldConfirmStopped(speedMs: 0.0, speedAccuracyMs: 2.0))
     }
+
+    /// 停車確認済みからGPS速度精度が赤のまま発進した直後は、緑へ戻るまで短時間だけラッチを保持する。
+    func testPoorGPSLaunchGracePreservesStoppedLatchBriefly() {
+        XCTAssertTrue(TimerEngine.shouldPreserveStoppedLatchDuringPoorGPS(
+            wasConfirmedStopped: true,
+            movingDuration: 2.0
+        ))
+        XCTAssertFalse(TimerEngine.shouldPreserveStoppedLatchDuringPoorGPS(
+            wasConfirmedStopped: true,
+            movingDuration: 6.0
+        ))
+        XCTAssertFalse(TimerEngine.shouldPreserveStoppedLatchDuringPoorGPS(
+            wasConfirmedStopped: false,
+            movingDuration: 1.0
+        ))
+    }
+
+    /// 偽発進判定はlookBackされたt=0ではなく、GPSが発進を検知した実時刻から5秒後に評価する。
+    func testFalseLaunchConfirmationUsesDetectionTime() {
+        let detected = base.addingTimeInterval(10)
+        XCTAssertFalse(TimerEngine.shouldAbortFalseLaunch(
+            launchDetectedAt: detected,
+            currentTime: detected.addingTimeInterval(1),
+            peakSpeedKmh: 0
+        ))
+        XCTAssertTrue(TimerEngine.shouldAbortFalseLaunch(
+            launchDetectedAt: detected,
+            currentTime: detected.addingTimeInterval(6),
+            peakSpeedKmh: 20
+        ))
+        XCTAssertFalse(TimerEngine.shouldAbortFalseLaunch(
+            launchDetectedAt: detected,
+            currentTime: detected.addingTimeInterval(6),
+            peakSpeedKmh: 30
+        ))
+    }
 }

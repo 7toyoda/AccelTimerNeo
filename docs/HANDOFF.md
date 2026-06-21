@@ -5,18 +5,19 @@
 **変更前に該当箇所を読み、ここに書かれた意図的な設計を壊さないこと。** 記述と実
 コードが食い違う場合は実コードを正とし、本書を更新すること。
 
-最終更新時の状態: バージョン 0.1.65 系 / Swift 6 / SwiftUI / SwiftData / iOS 17+。
+最終更新時の状態: バージョン 0.1.66 系 / Swift 6 / SwiftUI / SwiftData / iOS 17+。
 リポジトリ: GitHub `toy0da/accel-timer`（private・main ブランチ運用）。
 作業コピーは dev（`/Users/user01/dev/AccelTimer`・Xcode用）と Codex（`work/accel-timer`）の
 2つ。push したら両者を同期する（dev で push → Codex 側を `git pull --ff-only`）。
 
-**このセッション（〜v0.1.65）の主な変更:** ①課金を透かしモデル→トライアル課金へ全面変更
+**このセッション（〜v0.1.66）の主な変更:** ①課金を透かしモデル→トライアル課金へ全面変更
 （§7）。②停車確認しきい値に下限を追加し「停車してください」頻発を解消（§2, v0.1.58）。
 ③mph 単位対応（§10）。④バージョンを xcconfig に集約（§13）。⑤ログの wall_time を端末
 ローカル時刻に統一（§14, v0.1.60）。⑥検証用に「トライアルリセット」「診断ログ ZIP 共有」
 を `#if DEBUG` で追加（§10/§12）。⑦ARMED表示と低速誤発進を再調整し、5〜10km/hの徐行や
 hAcc悪化時の「停車してください」連発を抑制（§2/§5, v0.1.64）。⑧次回実走調査用に
-debug.csv の event 欄へ ARMED中のUI表示状態を記録（§14, v0.1.65）。
+debug.csv の event 欄へ ARMED中のUI表示状態を記録（§14, v0.1.65）。⑨赤GPS中の発進取りこぼしと
+偽発進判定の時刻基準を修正し、走行中ARMEDの長時間残留を抑制（§2, v0.1.66）。
 
 ---
 
@@ -60,6 +61,12 @@ debug.csv の event 欄へ ARMED中のUI表示状態を記録（§14, v0.1.65）
   渋滞クリープで誤発進→即 FALSE_LAUNCH_ABORT が出やすいのは仕様（下記フェイルセーフが除去）。
   v0.1.64でトリガーを10→13km/hへ引き上げ、5〜10km/hの徐行で `START → FALSE_LAUNCH_ABORT`
   になる頻度を下げた。t=0はCoreMotion lookBackで戻すため開始時刻精度は維持する。
+- **赤GPS中の発進救済（v0.1.66）**: 停車確認済みの直後にGPS速度精度が赤(sAcc≥2.0)になり、
+  そのまま発進すると、旧実装は赤の移動サンプルで `confirmedStopped=false` に戻し、緑へ戻った時点
+  ではすでに走行中のため再トリガーできなかった。2026-06-22 00:17台ログでは最高105.72km/hまで
+  `ARMED/UI=DRIVING` のまま残留。修正後は停車確認済みから赤GPSのまま動き始めた場合だけ
+  `poorGPSLaunchGraceSec`(5s) の猶予を置き、緑へ戻った瞬間に通常の13km/hトリガーを許可する。
+  猶予を超えた移動は従来通りラッチ解除し、ロールング発進は許可しない。
 - t=0 は `lookBackStartTime` でリングバッファの静止→加速の立ち上がり点へ遡って
   アンカー（高精度）。静止区間が無い（GPS遅延）場合は加速度から速度0時刻へ
   バックエクストラポレーション。
@@ -71,10 +78,13 @@ debug.csv の event 欄へ ARMED中のUI表示状態を記録（§14, v0.1.65）
   誤発火し、徐行を含む水増し計測が完走記録される問題があった。**トリガー時の加速度
   では判別不可**（lookback が t=0 を加速前に固定するため、クリーン発進の直後加速度が
   クリープより低くなる実測あり）。判別軸は「**発進後に速度が伸びるか**」。
-  フェイルセーフ: `start` から `launchConfirmSec`(5s) 以内にピークが `launchConfirmKmh`
-  (25km/h) 未満なら `abortRunDueToFalseLaunch()` で破棄。実走は5秒で余裕で25km/h超、
-  クリープは届かない。破棄後は車が動き続けるので（confirmedStopped が false のまま）
-  再停車まで再トリガーせず、ロールング発進も防ぐ。
+  フェイルセーフ: GPSが発進を検知した実時刻（`launchDetectedAt`）から
+  `launchConfirmSec`(5s) 以内にピークが `launchConfirmKmh`(25km/h) 未満なら
+  `abortRunDueToFalseLaunch()` で破棄。実走は5秒で余裕で25km/h超、クリープは届かない。
+  **v0.1.66で基準をlookBack後の `startTime` から `launchDetectedAt` へ変更**。旧実装は
+  lookBackでt=0を数秒遡るため、GPSトリガー直後の次サンプルで「すでに5秒経過」と誤判定し、
+  00:19/00:21台ログの本物の発進を `FALSE_LAUNCH_ABORT` していた。破棄後は車が動き続けるので
+  （confirmedStopped が false のまま）再停車まで再トリガーせず、ロールング発進も防ぐ。
 
 ## 3. 減速リセットは「意図的に無効」（重要・触らない）
 

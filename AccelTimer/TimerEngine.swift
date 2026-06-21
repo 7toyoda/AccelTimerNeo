@@ -90,6 +90,11 @@ final class TimerEngine {
     // READY（停車確認済み）になった時刻。表示が成立した直後のGPSサンプルで
     // いきなりRUNNINGへ入ると「READY前に開始」に見えるため、短い猶予を置く。
     private var readySince: Date?
+    // GPS速度精度が赤のまま発進した時に、直前の停車確認を短時間だけ保持する。
+    // 赤から緑へ戻った瞬間にGPS発進トリガーできるようにし、走行中ARMEDの取りこぼしを防ぐ。
+    private var poorGPSLaunchGraceSince: Date?
+    // 偽発進確認はlookBackで遡った発進点ではなく、GPSが実際に発進を検知した時刻から測る。
+    private var launchDetectedAt: Date?
     // 100Hz表示補間用：GPS EMAを起点に加速度で外挿し、GPS更新ごとに再アンカー
     private var motionDisplayKmh: Double = 0
     // motion.timestamp（起動後経過秒）→ Date への変換オフセット（GPS 10Hz で更新してキャッシュ）
@@ -134,6 +139,7 @@ final class TimerEngine {
     // 減らしながら発進時刻精度は維持する。
     private static let launchTriggerKmh = 13.0
     private static let readyHoldSec = 0.5
+    private static let poorGPSLaunchGraceSec = 5.0
     // RUNNING 中にピーク速度からこの値(km/h)以上減速したら加速中断とみなし計測を破棄する。
     // 信号待ち・渋滞・巡航を挟んで 100 km/h に達する「水増し」計測を防止する。
     private static let decelAbortDropKmh   = 15.0
@@ -238,6 +244,26 @@ final class TimerEngine {
         launchTriggerKmh / 3.6
     }
 
+    /// GPS速度精度が赤のまま動き始めた時、直前の停車確認を保持してよいか。
+    /// 停車確認済みからの赤GPS発進を数秒だけ救済し、長い移動後のロールング発進は許可しない。
+    nonisolated static func shouldPreserveStoppedLatchDuringPoorGPS(
+        wasConfirmedStopped: Bool,
+        movingDuration: TimeInterval
+    ) -> Bool {
+        wasConfirmedStopped && movingDuration <= poorGPSLaunchGraceSec
+    }
+
+    /// 微速クリープ誤発進の破棄判定。lookBack済みの真の発進点ではなく、GPS発進検知時刻を基準にする。
+    nonisolated static func shouldAbortFalseLaunch(
+        launchDetectedAt: Date?,
+        currentTime: Date,
+        peakSpeedKmh: Double
+    ) -> Bool {
+        guard let launchDetectedAt else { return false }
+        return currentTime.timeIntervalSince(launchDetectedAt) > launchConfirmSec
+            && peakSpeedKmh < launchConfirmKmh
+    }
+
     /// GPS Doppler が高速を示す一方で、同じサンプルで更新した位置ベース速度が大きく下回る場合は
     /// 停車中の速度グリッチとみなす。位置速度がまだ未確定なら判定しない。
     nonisolated static func isFakeDopplerSpeed(speedKmh: Double, positionSpeedKmh: Double?) -> Bool {
@@ -328,6 +354,8 @@ final class TimerEngine {
         lpfWindow.removeAll()
         confirmedStoppedWhileArmed = false
         readySince = nil
+        poorGPSLaunchGraceSince = nil
+        launchDetectedAt = nil
         deviceSteadyWhileArmed = false
         location.startUpdating()
         motion.startUpdates()
@@ -512,12 +540,31 @@ final class TimerEngine {
                 // 停車が確定＝偽発進推定（段差等）を解除して0へ戻す
                 armedLaunchActive = false
                 armedLaunchKmh = 0
+                poorGPSLaunchGraceSince = nil
             }
             // GPS精度が赤（sAcc >= 2.0）のまま車が動いた場合は停車確認をリセット
-            // → ユーザーは再停車してGPS精度が改善するのを待つ必要がある
+            // ただし、停車確認済みから赤GPSのまま発進した直後だけは短時間保持する。
+            // GPSが緑へ戻った時点で発進トリガーでき、走行中ARMEDの取りこぼしを防げる。
             if speedAccuracyMs >= 2.0 && speedMs > 1.4 {
-                confirmedStoppedWhileArmed = false
-                readySince = nil
+                if confirmedStoppedWhileArmed {
+                    let graceStart = poorGPSLaunchGraceSince ?? timestamp
+                    poorGPSLaunchGraceSince = graceStart
+                    if Self.shouldPreserveStoppedLatchDuringPoorGPS(
+                        wasConfirmedStopped: true,
+                        movingDuration: timestamp.timeIntervalSince(graceStart)
+                    ) {
+                        gpsLogEvent = "GPS_POOR_LAUNCH_GRACE"
+                    } else {
+                        confirmedStoppedWhileArmed = false
+                        readySince = nil
+                        poorGPSLaunchGraceSince = nil
+                        gpsLogEvent = "GPS_POOR_LAUNCH_EXPIRED"
+                    }
+                } else {
+                    confirmedStoppedWhileArmed = false
+                    readySince = nil
+                    poorGPSLaunchGraceSince = nil
+                }
             }
             // 停車確認後、低速クリープを拾わない13km/hで計測開始。
             let launchThresholdMs = Self.launchThresholdMs(speedAccuracyMs: speedAccuracyMs)
@@ -532,13 +579,15 @@ final class TimerEngine {
                     currSpeed: speedMs,       currTime: timestamp
                 )
                 gpsLogEvent = "GPS_TRIGGER"
-                startMeasurement(at: lookBackStartTime(fallback: gpsFallback, currSpeedMs: speedMs))
+                startMeasurement(at: lookBackStartTime(fallback: gpsFallback, currSpeedMs: speedMs),
+                                 detectedAt: timestamp)
                 // ARMED→RUNNING 遷移直後、次の GPS 到着まで最大1秒 motionDisplayKmh=0 のため
                 // 表示補間が働かない問題を防ぐ：トリガー時の GPS 速度を起点として設定
                 gpsDisplayKmh = speedKmh
                 motionDisplayKmh = speedKmh
                 fusedSpeedKmh = speedKmh
                 armedLaunchActive = false   // RUNNINGへ移行＝表示推定の役目終了
+                poorGPSLaunchGraceSince = nil
                 if lastGPSTime != .distantPast {
                     checkSplits(prev: (lastGPSSpeedMs, lastGPSTime),
                                 curr: (speedMs, timestamp), source: "GPS")
@@ -586,12 +635,13 @@ final class TimerEngine {
             if speedKmh < 5.0 && !autoResetRequested && peakSpeedKmh >= 5.0 {
                 autoResetRequested = true
             }
-            // 偽発進フェイルセーフ（微速クリープ対策）：start から launchConfirmSec 秒以内に
-            // ピークが launchConfirmKmh に届かない＝信号待ちの微速前進等で誤トリガーした計測。
+            // 偽発進フェイルセーフ（微速クリープ対策）：GPS発進検知から launchConfirmSec 秒後に
+            // ピークが launchConfirmKmh 未満＝信号待ちの微速前進等で誤トリガーした計測。
             // クリープは止まらず低速のまま進むこともあるため、現在速度は条件にしない。
-            if state == .running, let start = startTime,
-               timestamp.timeIntervalSince(start) > Self.launchConfirmSec,
-               peakSpeedKmh < Self.launchConfirmKmh {
+            if state == .running,
+               Self.shouldAbortFalseLaunch(launchDetectedAt: launchDetectedAt,
+                                           currentTime: timestamp,
+                                           peakSpeedKmh: peakSpeedKmh) {
                 abortRunDueToFalseLaunch()
                 return
             }
@@ -819,8 +869,9 @@ final class TimerEngine {
         return oldestDate < fallback ? oldestDate : fallback
     }
 
-    private func startMeasurement(at time: Date) {
+    private func startMeasurement(at time: Date, detectedAt: Date) {
         startTime = time
+        launchDetectedAt = detectedAt
         startCoordinate = location.coordinate
         state = .running
         hapticHeavy.impactOccurred()
@@ -1033,6 +1084,8 @@ final class TimerEngine {
         armedLaunchKmh      = 0
         armedLaunchActive   = false
         readySince          = nil
+        poorGPSLaunchGraceSince = nil
+        launchDetectedAt    = nil
         motionToWallOffset  = 0
         ringBuffer.removeAll(keepingCapacity: true)
         lpfWindow.removeAll()
