@@ -5,8 +5,16 @@
 **変更前に該当箇所を読み、ここに書かれた意図的な設計を壊さないこと。** 記述と実
 コードが食い違う場合は実コードを正とし、本書を更新すること。
 
-最終更新時の状態: バージョン 0.1.52 系 / Swift 6 / SwiftUI / SwiftData / iOS 17+。
-リポジトリ: GitHub `toy0da/accel-timer`（main ブランチ運用）。
+最終更新時の状態: バージョン 0.1.61 系 / Swift 6 / SwiftUI / SwiftData / iOS 17+。
+リポジトリ: GitHub `toy0da/accel-timer`（private・main ブランチ運用）。
+作業コピーは dev（`/Users/user01/dev/AccelTimer`・Xcode用）と Codex（`work/accel-timer`）の
+2つ。push したら両者を同期する（dev で push → Codex 側を `git pull --ff-only`）。
+
+**このセッション（〜v0.1.61）の主な変更:** ①課金を透かしモデル→トライアル課金へ全面変更
+（§7）。②停車確認しきい値に下限を追加し「停車してください」頻発を解消（§2, v0.1.58）。
+③mph 単位対応（§10）。④バージョンを xcconfig に集約（§13）。⑤ログの wall_time を端末
+ローカル時刻に統一（§14, v0.1.60）。⑥検証用に「トライアルリセット」「診断ログ ZIP 共有」
+を `#if DEBUG` で追加（§10/§12）。
 
 ---
 
@@ -33,7 +41,18 @@
 
 - 発進トリガー条件: `confirmedStoppedWhileArmed && READY成立から0.5秒以上 &&
   speedMs > launchThreshold && speedAccuracy < 2.0`。`launchThreshold = 10 km/h` 固定。
-  **停車確認（GPS良好で速度≈0）が前提**。これは正常に効いている（実ログ全発進で成立）。
+  **停車確認（GPS良好で速度≈0）が前提**。
+- **停車確認しきい値の下限（v0.1.58・重要修正）**: 停車判定は
+  `TimerEngine.stoppedThresholdMs(speedAccMs:) = max(1.0, min(sAcc, 1.4))` m/s
+  （下限 3.6km/h・上限 5km/h）。arm() と handleGPS の2箇所で共通使用。
+  **下限が無い旧実装 `min(sAcc,1.4)` だと、GPS精度が良い(sAcc≈0.3m/s)とき しきい値が
+  1.1km/h まで小さくなり、駐車中でも GPS Doppler の揺らぎ(~1.5-2.7km/h)を超え続けて
+  永遠に停車確認できず「停車してください」が消えない**バグがあった（2026-06-21 実走ログで
+  確認）。下限 1.0m/s で吸収。発進トリガー(>10km/h)・上限(1.4)は不変なので誤停車・発進検知へ
+  の影響なし。実ログ検証: 修正後は「実停車(speed<3.6km/h)＋GPS良好」で停車確認失敗ゼロ。
+- 発進検知が高速(13-18km/h)で出るのは GPS ~1Hz 更新の遅延（t=0 は lookBack 補正で正確）。
+  渋滞クリープで誤発進→即 FALSE_LAUNCH_ABORT が出やすいのは仕様（下記フェイルセーフが除去）。
+  「もっとトリガーを鈍く（10→13-15km/h, READY保持0.5→1.0秒）」はユーザー保留中の任意改善。
 - t=0 は `lookBackStartTime` でリングバッファの静止→加速の立ち上がり点へ遡って
   アンカー（高精度）。静止区間が無い（GPS遅延）場合は加速度から速度0時刻へ
   バックエクストラポレーション。
@@ -87,22 +106,35 @@
   `MeasurementRecord.isReferenceOnly`（`finishSpeedAccuracy >= 1.0 || unstableStart`）で
   「参考値」バッジ表示。手持ち計測を**禁止せず**、品質を示す方針。
 
-## 7. 課金（透かし除去モデル・v0.1.37）
+## 7. 課金（トライアル課金モデル・v0.1.53〜）
 
-**計測・履歴保存・共有は常に無料・無制限。無料ユーザーが共有する結果カードには
-「体験版」透かしを入れ、買い切りで透かしを除去する**。
-- 旧「履歴5件まで無料→超過でペイウォール」型は廃止。保存を課金で止める分岐は削除済み。
-- 課金判定は `StoreManager.isPurchased` / `showsWatermark` が中心。`ResultCardView` /
-  `CelebrationView` のカード共有で透かし有無を分岐する。履歴詳細の通常操作からは
-  結果カード共有を外している（ユーザー自身が使いたいと思わないため、履歴UIのノイズを
-  減らす判断）。
+**現行モデル: 累計30回の「完走」まで無料 → 使い切ると1日1回まで無料 → 買い切りで無制限。**
+中核計測（＝唯一価値があるもの）をゲートする唯一の形。サブスク/バックエンドは持たない方針
+（ユーザー本気度＝「小遣い・低負担」）。**透かし/結果カード共有モデルは廃止**（ユーザーが
+カード共有にも動画にも価値を感じないと明言。コードも削除済み）。
+
+- 判定: `StoreManager.canMeasure = isPurchased || !trialExhausted || !freeUsedToday`。
+  `freeTrialLimit = 30`、`trialCount`/`lastFreeDay` は `TrialKeychain`（再インストールでも
+  リセットされない）をミラーした @Observable プロパティ。`freeTrialRemaining`/`trialExhausted`/
+  `freeUsedToday` で UI 表示。
+- 「完走＝1回消費」の定義は **表示単位依存**: km/h は 100km/h 到達(`isComplete`)、
+  mph は 60mph 到達(`saved.splitTime(unit:.mph, band:3) != nil`)。`ContentView.registerIfCompleted`
+  が新規完走レコード保存時のみ `store.registerCompletedMeasurement()` を呼ぶ。未達/誤発進は
+  消費しない。
+- **計測開始ゲート**: 全 `arm()` 呼び出し箇所を `store.canMeasure` でガード。枠超過時は
+  `attemptSaveAndArm` で `saveAndArm`（動画経路は不変のまま）後、**次runloopで `engine.cancel()`**
+  して `lockedMeasurementOverlay`（購入導線）を表示。`handleStateChange` の idle 自動 arm も
+  canMeasure ガード必須（cancel→idle で再 arm しないため）。
 - 買い切り（非消費型 IAP `com.acceltimer.app.AccelTimer.unlock`、¥800、StoreKit2）。
-  ローカルテストは `AccelTimer.storekit` をスキームが参照。
-- `TrialKeychain.swift` は現在未使用（将来の不正防止用に残置）。
+  ローカルテストは `AccelTimer.storekit` をスキームが参照。`PaywallView` は「無制限解放」訴求。
+- **削除済み（旧透かしモデルの残骸）**: `ResultCardView.swift` / `CelebrationView.swift` /
+  `StoreManager.showsWatermark` / 新記録祝福シート。新記録の高揚はスプリット/履歴の金色
+  ハイライトで継続。
 - **不変条件: 動画はレコードと対でのみ保存する**（v0.1.31）。計測中断などでレコードを
   残さない時は動画も `discardCurrentVideo()` で破棄すること。さもないと動画だけ
   保存されて孤立し、`applyPendingVideoFileName` が別計測へ誤ひも付けする。保存経路
   （attemptSaveAndArm/attemptSaveResult/10秒保険/onDisappear(finished)）はこの規則を守る。
+  トライアル枠超過時の cancel は **saveAndArm の後（＝動画保存後）に async** で行い、この規則を崩さない。
 
 ## 8. 省電力
 
@@ -141,6 +173,15 @@
   追跡できるようにしている。
 - 履歴は `TimerEngine.trimHistory` がリーダーボード方式（日付順30＋各速度帯上位10の
   和集合、実質30〜70件）。履歴の「並びごと除外」フラグ `hiddenFromDate/Time`。
+  HistoryView の並び替え帯は「単位×index(0..3)」へ一般化（`MeasurementRecord.splitTime(unit:band:)`）。
+  ただし **trimHistory のデータ保持帯は km/h 基準のまま**（保持⊇表示なので実害小・データ消失回避）。
+- **ログ時刻はローカル時刻（v0.1.60）**: DebugLogger / MeasurementLogger の ISO8601 に
+  `timeZone=.current` 設定済み。例 `2026-06-21T20:09:49.080+09:00`。ファイル名のローカル時刻と
+  一致し時差換算不要。**既存ログ（旧版）は UTC(`Z`)なので+9hで読む**。
+- **検証用ツール（`#if DEBUG`・SettingsView）**: トライアルのリセット（`StoreManager.resetTrial()`）、
+  購入画面の即時表示、診断ログの ZIP 共有（`makeLogsZipURL`＝NSFileCoordinator .forUploading で
+  debug.csv＋logs/*.csv を `AccelTimer-logs-<日時>.zip` 化→共有シート/AirDrop）。リリースビルドでは
+  自動的に消える。
 
 ## 11. テスト
 
@@ -150,8 +191,13 @@ TestAction に含まれる。新規ロジックは可能な限り純粋関数に
 
 ## 12. リリース前 TODO・既知のトレードオフ
 
-- `SettingsView` の「購入画面を表示（検証用）」デバッグボタンを削除する。
+- 検証用UI（トライアルリセット/購入画面表示/診断ログZIP共有）は `#if DEBUG` 済みなので
+  リリースビルドでは自動的に除外される（手動削除は不要）。
 - 減速リセット無効による水増しタイムは現状許容（必要なら保存時の事後判定を相談）。
+- 動画保存が一度 `VIDEO_SAVE_TIMEOUT` を記録（直後に `VIDEO_SAVED` で復帰・実害なし）。
+  頻発するなら保存経路のタイミングを見直す（現状は監視レベル）。
+- ワイヤレスデバッグ（Connect via Network）は通常のWi-Fiルーター環境が前提。
+  iPhoneテザリング(Personal Hotspot)では不可。ルーターWi-Fiが無ければ有線でビルド。
 - App Store 配布には Apple Developer Program 加入・IAP 登録・審査・銀行/税務契約が必要。
   個人アカウントは販売者名に本名が公開される点に留意。
 - GitHub PAT は 2026-09-13 失効予定。push 不可になったら再発行しキーチェーンに再保存。
