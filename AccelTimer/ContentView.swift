@@ -505,14 +505,6 @@ struct MeasureView: View {
                         .font(.caption2.bold())
                         .foregroundStyle(.red)
                 }
-            } else if videoEnabled {
-                HStack(spacing: 4) {
-                    Image(systemName: videoSessionReady ? "video.fill" : "video.slash")
-                        .font(.caption2.bold())
-                    Text(videoSessionReady ? "VIDEO READY" : "CAM...")
-                        .font(.caption2.bold())
-                }
-                .foregroundStyle(videoSessionReady ? .green : .orange)
             }
             Text(stateLabel)
                 .font(.caption2)
@@ -766,6 +758,8 @@ struct MeasureView: View {
             let videoGranted = await VideoRecorder.requestAccess(for: .video)
             guard videoGranted else {
                 logVideoEvent("VIDEO_PERMISSION_DENIED_CAMERA")
+                videoEnabled = false
+                videoSessionReady = false
                 videoErrorMessage = String(localized: "カメラへのアクセスが拒否されています。設定アプリから許可してください。")
                 return
             }
@@ -774,6 +768,7 @@ struct MeasureView: View {
                 audioGranted = await VideoRecorder.requestAccess(for: .audio)
                 if !audioGranted {
                     logVideoEvent("VIDEO_PERMISSION_DENIED_MIC")
+                    videoAudioEnabled = false
                     videoErrorMessage = String(localized: "マイクへのアクセスが拒否されています。音声なしで録画します。")
                 }
             }

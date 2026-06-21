@@ -77,18 +77,20 @@ struct SettingsView: View {
                         Text("計測開始から完了まで後方カメラで録画し、速度・タイムをオーバーレイしてアプリ内に保存します。履歴詳細から再生できます")
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                        LabeledContent("カメラ") {
-                            Text(cameraPermissionText)
-                                .foregroundStyle(cameraPermissionColor)
+                        if cameraPermissionDenied {
+                            Label("カメラ権限がないため、動画録画は使えません", systemImage: "exclamationmark.triangle.fill")
+                                .font(.caption)
+                                .foregroundStyle(.orange)
                         }
                         if videoEnabled {
                             Toggle("走行音を録音", isOn: $audioEnabled)
                             Text("走行音を動画に収録します")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
-                            LabeledContent("マイク") {
-                                Text(microphonePermissionText)
-                                    .foregroundStyle(microphonePermissionColor)
+                            if microphonePermissionDenied {
+                                Label("マイク権限がないため、音声録音は使えません", systemImage: "exclamationmark.triangle.fill")
+                                    .font(.caption)
+                                    .foregroundStyle(.orange)
                             }
                         }
                     }
@@ -113,6 +115,9 @@ struct SettingsView: View {
         }
         .sheet(isPresented: $showDisclaimer) {
             DisclaimerView(isFirstLaunch: false) { showDisclaimer = false }
+        }
+        .onAppear {
+            reconcileVideoPermissionToggles()
         }
         // 動画録画ON時：カメラ許可をその場で確認。拒否ならトグルを戻し案内する
         .onChange(of: videoEnabled) { _, on in
@@ -153,37 +158,28 @@ struct SettingsView: View {
         }
     }
 
-    private var cameraPermissionText: String {
-        permissionText(for: AVCaptureDevice.authorizationStatus(for: .video))
+    private var cameraPermissionDenied: Bool {
+        permissionDenied(AVCaptureDevice.authorizationStatus(for: .video))
     }
 
-    private var cameraPermissionColor: Color {
-        permissionColor(for: AVCaptureDevice.authorizationStatus(for: .video))
+    private var microphonePermissionDenied: Bool {
+        permissionDenied(AVCaptureDevice.authorizationStatus(for: .audio))
     }
 
-    private var microphonePermissionText: String {
-        permissionText(for: AVCaptureDevice.authorizationStatus(for: .audio))
-    }
-
-    private var microphonePermissionColor: Color {
-        permissionColor(for: AVCaptureDevice.authorizationStatus(for: .audio))
-    }
-
-    private func permissionText(for status: AVAuthorizationStatus) -> String {
+    private func permissionDenied(_ status: AVAuthorizationStatus) -> Bool {
         switch status {
-        case .authorized: return "許可済み"
-        case .notDetermined: return "未確認"
-        case .denied, .restricted: return "許可なし"
-        @unknown default: return "不明"
+        case .denied, .restricted: return true
+        case .authorized, .notDetermined: return false
+        @unknown default: return true
         }
     }
 
-    private func permissionColor(for status: AVAuthorizationStatus) -> Color {
-        switch status {
-        case .authorized: return .green
-        case .notDetermined: return .orange
-        case .denied, .restricted: return .red
-        @unknown default: return .secondary
+    private func reconcileVideoPermissionToggles() {
+        if videoEnabled && cameraPermissionDenied {
+            videoEnabled = false
+        }
+        if audioEnabled && microphonePermissionDenied {
+            audioEnabled = false
         }
     }
 }
