@@ -730,7 +730,7 @@ struct MeasureView: View {
                     Text("GPS確認中")
                         .font(.system(size: 48, weight: .black, design: .rounded))
                         .foregroundStyle(.orange)
-                        .opacity(gpsPulse ? 1.0 : 0.25)
+                        .opacity(gpsPulse ? 1.0 : 0.5)
                 } else if engine.state == .armed && !engine.confirmedStoppedWhileArmed {
                     Text("停車してください")
                         .font(.system(size: 40, weight: .black, design: .rounded))
