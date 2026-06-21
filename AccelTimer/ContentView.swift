@@ -690,19 +690,25 @@ struct MeasureView: View {
                         .font(.system(size: 48, weight: .black, design: .rounded))
                         .foregroundStyle(.orange)
                         .opacity(gpsPulse ? 1.0 : 0.5)
-                } else if engine.state == .armed && !engine.confirmedStoppedWhileArmed {
-                    Text("停車してください")
-                        .font(.system(size: 40, weight: .black, design: .rounded))
-                        .foregroundStyle(.orange)
-                        .opacity(gpsPulse ? 1.0 : 0.5)
-                } else {
-                    // 停車確認＋GPS良好で READY。端末固定はトリガー/録画の必須条件ではない
-                    // （手持ちでも計測可・参考値扱い）ため、固定の案内はサブ文言で促す。
+                } else if armedDisplay == .ready {
+                    // 実際に停車（速度≈0）＋停車確認済みのときだけ READY。走行中はラッチが
+                    // 残っていても READY にしない（端末固定はサブ文言で促す）。
                     Text("READY")
                         .font(.system(size: 48, weight: .black, design: .rounded))
                         .foregroundStyle(.green)
                         .opacity(readyPulse ? 1.0 : 0.55)
                         .scaleEffect(readyPulse ? 1.04 : 1.0)
+                } else if armedDisplay == .driving {
+                    // 明確に走行中：急かさない控えめ表示（流し運転中の「停車してください」連発を防ぐ）
+                    Text("走行中")
+                        .font(.system(size: 34, weight: .bold, design: .rounded))
+                        .foregroundStyle(.secondary)
+                } else {
+                    // 低速・未停車：完全停止を促す
+                    Text("停車してください")
+                        .font(.system(size: 40, weight: .black, design: .rounded))
+                        .foregroundStyle(.orange)
+                        .opacity(gpsPulse ? 1.0 : 0.5)
                 }
                 Text(armedSubtitle)
                     .font(.caption)
@@ -1017,15 +1023,30 @@ struct MeasureView: View {
         return spd < 0 || spd >= 2.0
     }
 
-    // ARMED 状態のサブテキスト（停車待ち → 端末固定待ち → READY の順に案内）
+    // ARMED 表示の3状態。READY=実停車、driving=走行中（急かさない）、stopPlease=低速・要停車。
+    private enum ArmedDisplay { case ready, driving, stopPlease }
+    private var armedDisplay: ArmedDisplay {
+        let v = engine.displaySpeedKmh
+        // 実際に停車（≈0）かつ停車確認済みのときだけ READY（ラッチが残っていても走行中はREADYにしない）
+        if engine.confirmedStoppedWhileArmed && v < 5.0 { return .ready }
+        // 発進しきい値(10km/h)以上で動いている＝明確に走行中。急かさない
+        if v >= 10.0 { return .driving }
+        return .stopPlease
+    }
+
+    // ARMED 状態のサブテキスト。
     private var armedSubtitle: String {
-        if engine.state == .armed && !engine.confirmedStoppedWhileArmed {
+        switch armedDisplay {
+        case .ready:
+            if !engine.deviceSteadyWhileArmed {
+                return String(localized: "端末を車体に固定すると高精度で計測できます")
+            }
+            return String(localized: "発進を検知して自動スタート（10 km/h前後）")
+        case .driving:
+            return String(localized: "停車すると計測できます")
+        case .stopPlease:
             return String(localized: "完全停止でREADY状態になります")
         }
-        if engine.state == .armed && !engine.deviceSteadyWhileArmed {
-            return String(localized: "端末を車体に固定すると高精度で計測できます")
-        }
-        return String(localized: "発進を検知して自動スタート（10 km/h前後）")
     }
 
     // 速度精度（Doppler speedAccuracy, m/s）でインジケーターを判定

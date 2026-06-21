@@ -519,6 +519,13 @@ final class TimerEngine {
                 confirmedStoppedWhileArmed = false
                 readySince = nil
             }
+            // 良好GPSで「明確に走行中」（発進しきい値10km/hを十分超える15km/h超）なら停車ラッチを解除。
+            // ラッチが残ったまま走行してREADY表示・誤トリガーするのを防ぐ（通常発進は10km/hで
+            // 既にRUNNINGへ遷移するため、この解除は正常な発進検知を妨げない）。
+            if armedSpeedAccGood && speedKmh > 15.0 {
+                confirmedStoppedWhileArmed = false
+                readySince = nil
+            }
 
             // 停車確認後、低速クリープを拾わない10km/hで計測開始。
             let launchThresholdMs = Self.launchThresholdMs(speedAccuracyMs: speedAccuracyMs)
