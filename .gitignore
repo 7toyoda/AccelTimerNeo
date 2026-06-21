@@ -12,8 +12,14 @@ DerivedData/
 *.moved-aside
 *.hmap
 *.ipa
+*.xcarchive
 *.dSYM.zip
 *.dSYM
+*.mobileprovision
+*.provisionprofile
+*.cer
+*.p12
+*.p8
 
 # Swift Package Manager
 .swiftpm/
@@ -26,3 +32,16 @@ Carthage/Build/
 
 # Claude Code - マシン固有のローカル設定
 .claude/settings.local.json
+
+# AccelTimer - user generated measurement data
+*.csv
+*.log
+*.mov
+*.mp4
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.db
+debug/
+logs/
+recordings/
