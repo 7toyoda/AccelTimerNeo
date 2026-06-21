@@ -200,6 +200,17 @@ final class TimerEngine {
     /// 完了判定には使わず、表示用に並行記録するだけ。
     static let mphSplitThresholdsMs: [Double] = [15, 30, 45, 60].map { Double($0) * 1.609344 / 3.6 }
 
+    /// 停車確認の速度しきい値（m/s）の下限と上限。
+    /// 下限 1.0 m/s(=3.6km/h)：駐車中でも GPS Doppler は ~1.5-2.7km/h の揺らぎを出すため、
+    ///   精度が良い(sAcc小)ときに しきい値が小さくなりすぎて永遠に停車確認できない問題を防ぐ。
+    /// 上限 1.4 m/s(=5km/h)：精度不良(sAcc大)時の誤停車判定を防ぐ。発進トリガー(>5km/h)より下。
+    static let stoppedSpeedFloorMs = 1.0
+    static let stoppedSpeedCapMs = 1.4
+    /// sAcc(m/s) に応じた停車しきい値(m/s)。floor..cap にクランプ。
+    static func stoppedThresholdMs(speedAccMs: Double) -> Double {
+        max(stoppedSpeedFloorMs, min(speedAccMs, stoppedSpeedCapMs))
+    }
+
     /// 速度しきい値クロス時刻を線形補間で算出する純粋関数（テスト対象）。
     /// `prev.speed < threshold <= curr.speed` を満たす連続2サンプル間で、
     /// しきい値に到達した時刻を線形補間し、ミリ秒精度のクロス時刻を返す。
@@ -248,9 +259,9 @@ final class TimerEngine {
         // GPS未取得（起動直後など speedAccuracy<=0）のときは fusedSpeedKmh=0 が
         // 「停車」と誤判定するため、GPS有効時のみ停車確認済みとみなす
         let speedAcc = gpsSpeedAccuracy
-        // GPS速度が精度範囲内（かつ最大5 km/h以内）なら停車確認済み
-        // 旧: speedAcc*1.5 は精度 0.5 m/s で 2.7 km/h → 走行中に停車と誤判定する
-        let stoppedThresholdMs = speedAcc > 0 ? min(speedAcc, 1.4) : 0.0
+        // GPS速度が停車しきい値以内なら停車確認済み（floor..cap でクランプ）
+        // 精度が良くても下限を設けないと駐車中のGPS揺らぎ(~2.7km/h)で停車確認できない
+        let stoppedThresholdMs = speedAcc > 0 ? Self.stoppedThresholdMs(speedAccMs: speedAcc) : 0.0
         // fusedSpeedKmh は表示用（.idle では Kalman 未更新で常に 0）なので
         // 実際の GPS Doppler 速度で停車判定する
         // speedAcc < 2.0: GPS赤状態（精度不良）では停車確認を成立させない。
@@ -490,10 +501,10 @@ final class TimerEngine {
                 fusedSpeedKmh = max(fusedSpeedKmh, armedLaunchKmh)
             }
 
-            // GPS速度精度が良好（sAcc < 2.0）かつ速度が精度範囲内 → 停車確認
+            // GPS速度精度が良好（sAcc < 2.0）かつ速度が停車しきい値以内 → 停車確認
             // sAcc >= 2.0（赤状態）での停車確認は信頼性が低いため受け付けない
-            // min(..., 1.4): 精度不良時（sAcc=3.7 m/s など）の誤停車判定を防ぐ上限キャップ
-            if speedAccuracyMs < 2.0 && speedMs < min(speedAccuracyMs, 1.4) {
+            // しきい値は floor(1.0m/s)..cap(1.4m/s)。floorが無いと精度良好時に駐車中GPS揺らぎで停車不成立
+            if speedAccuracyMs < 2.0 && speedMs < Self.stoppedThresholdMs(speedAccMs: speedAccuracyMs) {
                 if !confirmedStoppedWhileArmed {
                     readySince = timestamp
                 }
