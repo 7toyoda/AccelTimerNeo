@@ -98,8 +98,6 @@ struct MeasureView: View {
     @State private var videoErrorMessage: String? = nil
     @State private var pendingVideoFileName: String? = nil
     @State private var backgroundAbortToast = false
-    // 新記録（自己ベスト更新）を出したときに祝福シートで表示するレコード
-    @State private var celebrationRecord: MeasurementRecord?
     // 表示単位（km/h / mph）。計測の中核は常に km/h、表示とマイルストーンのみ切替。
     @AppStorage("speedUnit") private var speedUnitRaw: String = SpeedUnit.defaultForLocale.rawValue
     // mph マイルストーンのベストタイム（records 変更時に再計算してキャッシュ）
@@ -132,31 +130,25 @@ struct MeasureView: View {
 
     /// 完了/中断後の結果を保存して次の待機へ進める。
     private func attemptSaveAndArm() {
-        let prevBest = best100
-        let prevMphBest = mphBests[3]
         let prevSaved = engine.lastSavedRecord
         engine.saveAndArm(context: modelContext)
         registerIfCompleted(prevSaved: prevSaved)
-        presentCelebrationIfNewBest(prevBest: prevBest, prevMphBest: prevMphBest, prevSaved: prevSaved)
         // 無料枠を使い切ったら、armされた次計測を次runloopで解除しロックする。
         // （.armed の onChange で動画保存が走った後に cancel するため async）
         if !store.canMeasure {
             DispatchQueue.main.async {
                 if engine.state == .armed { engine.cancel() }
-                if celebrationRecord == nil { showPaywall = true }
+                showPaywall = true
             }
         }
     }
 
     /// autoReset=OFF 完了時に、レコードと動画を対で保存する。
     private func attemptSaveResult() {
-        let prevBest = best100
-        let prevMphBest = mphBests[3]
         let prevSaved = engine.lastSavedRecord
         stopVideoRecordingIfNeeded()
         engine.saveResult(context: modelContext)
         registerIfCompleted(prevSaved: prevSaved)
-        presentCelebrationIfNewBest(prevBest: prevBest, prevMphBest: prevMphBest, prevSaved: prevSaved)
     }
 
     /// 直前の保存が「最後まで到達した新規レコード」なら無料枠を1回消費する。
@@ -179,24 +171,6 @@ struct MeasureView: View {
         logVideoEvent("VIDEO_DISCARD_CURRENT")
         recorder.cancelAndDiscard()
         isVideoRecording = false
-    }
-
-    /// 直前の保存が表示単位の自己ベスト更新なら祝福シートを出す。
-    /// `prevSaved` と異なる新レコードが保存された場合のみ対象（未保存ランの取り違え防止）。
-    private func presentCelebrationIfNewBest(prevBest: Double?, prevMphBest: Double?,
-                                             prevSaved: MeasurementRecord?) {
-        guard let saved = engine.lastSavedRecord, saved !== prevSaved, saved.isComplete else { return }
-        let didImprove: Bool
-        switch unit {
-        case .kmh:
-            didImprove = prevBest == nil || saved.totalTime < prevBest!
-        case .mph:
-            guard let mph60 = saved.splitTime(unit: .mph, band: 3) else { return }
-            didImprove = prevMphBest == nil || mph60 < prevMphBest!
-        }
-        if didImprove {
-            celebrationRecord = saved
-        }
     }
 
     // 各速度帯のベストタイム
@@ -423,16 +397,6 @@ struct MeasureView: View {
         }
         .sheet(isPresented: $showPaywall) {
             PaywallView(store: store) { showPaywall = false }
-        }
-        // 新記録（自己ベスト更新）の祝福シート。トロフィー表示＋透かし除去訴求（ピーク課金導線）。
-        .sheet(item: $celebrationRecord) { record in
-            CelebrationView(record: record, store: store) {
-                // 透かしを消す：祝福を閉じてからペイウォールを開く（二重シート競合を避ける）
-                celebrationRecord = nil
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { showPaywall = true }
-            } onClose: {
-                celebrationRecord = nil
-            }
         }
         .onChange(of: videoEnabled) { _, enabled in
             if enabled {
@@ -735,7 +699,7 @@ struct MeasureView: View {
                     Text("停車してください")
                         .font(.system(size: 40, weight: .black, design: .rounded))
                         .foregroundStyle(.orange)
-                        .opacity(gpsPulse ? 1.0 : 0.4)
+                        .opacity(gpsPulse ? 1.0 : 0.5)
                 } else {
                     // 停車確認＋GPS良好で READY。端末固定はトリガー/録画の必須条件ではない
                     // （手持ちでも計測可・参考値扱い）ため、固定の案内はサブ文言で促す。
