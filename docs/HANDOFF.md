@@ -5,7 +5,7 @@
 **変更前に該当箇所を読み、ここに書かれた意図的な設計を壊さないこと。** 記述と実
 コードが食い違う場合は実コードを正とし、本書を更新すること。
 
-最終更新時の状態: バージョン 0.1.66 系 / Swift 6 / SwiftUI / SwiftData / iOS 17+。
+最終更新時の状態: バージョン 0.1.67 系 / Swift 6 / SwiftUI / SwiftData / iOS 17+。
 リポジトリ: GitHub `toy0da/accel-timer`（private・main ブランチ運用）。
 作業コピーは dev（`/Users/user01/dev/AccelTimer`・Xcode用）と Codex（`work/accel-timer`）の
 2つ。push したら両者を同期する（dev で push → Codex 側を `git pull --ff-only`）。
@@ -17,7 +17,10 @@
 を `#if DEBUG` で追加（§10/§12）。⑦ARMED表示と低速誤発進を再調整し、5〜10km/hの徐行や
 hAcc悪化時の「停車してください」連発を抑制（§2/§5, v0.1.64）。⑧次回実走調査用に
 debug.csv の event 欄へ ARMED中のUI表示状態を記録（§14, v0.1.65）。⑨赤GPS中の発進取りこぼしと
-偽発進判定の時刻基準を修正し、走行中ARMEDの長時間残留を抑制（§2, v0.1.66）。
+偽発進判定の時刻基準を修正し、走行中ARMEDの長時間残留を抑制（§2, v0.1.66）。⑩発進検出の根本リファクタ
+（§2, v0.1.67）：停車確認を位置ベース速度と融合（sAcc赤張り付きでの取りこぼし解消）、偽発進アボートを
+dopplerLooksFakeガードの外へ（クリープ破棄の18秒遅延解消）、ARMEDラッチ遷移を純粋関数 `updateArmedLaunch`
+へ集約してテスト化（実走ごとの例外追加ループを断つ）。
 
 ---
 
@@ -67,6 +70,26 @@ debug.csv の event 欄へ ARMED中のUI表示状態を記録（§14, v0.1.65）
   `ARMED/UI=DRIVING` のまま残留。修正後は停車確認済みから赤GPSのまま動き始めた場合だけ
   `poorGPSLaunchGraceSec`(5s) の猶予を置き、緑へ戻った瞬間に通常の13km/hトリガーを許可する。
   猶予を超えた移動は従来通りラッチ解除し、ロールング発進は許可しない。
+- **発進検出の根本リファクタ（v0.1.67・重要）**: 2026-06-22 01時台の検証走行ログで2つの構造的バグを確認し、
+  小手先の分岐追加ではなく根本から作り直した。3点：
+  1. **停車確認を位置ベース速度と融合**（バグA・最重大）。`shouldConfirmStopped` は従来 `sAcc<2.0` を
+     **必須ゲート**にしていたが、iOS の Doppler `sAcc` は停車直後に赤(≈3.7m/s)へ張り付くことがあり
+     （01:09台ログ：speed=0.00で23秒・hAcc=2.5m良好なのに sAcc=3.74 のため `conf_stopped=0` 継続→
+     直後の113km/h発進をまるごと取りこぼし）。新実装は2経路の論理和：**A)** sAcc良好なら従来通りDoppler速度で即確認、
+     **B)** sAcc赤でも **生GPS速度≈0 かつ 位置ベース速度 `positionSpeedKmh`≈0**（座標が動いていない）なら停車確認。
+     `positionSpeedKmh` は sAcc と独立した真値（既存の偽Doppler検出で算出済み）。赤時の偽高速グリッチは生速度が
+     高く出るため B を通らず誤確認しない。位置速度未確定(`positionSpeedValid=false`)の間は B を使わない。
+  2. **偽発進フェイルセーフをガードの外へ**（バグB）。`case .running` 冒頭の `guard !dopplerLooksFake else { break }`
+     が偽発進アボート(`shouldAbortFalseLaunch`)も囲っており、クリープの偽Dopplerサンプルでアボート判定が
+     スキップされ破棄が大幅遅延（01:04台ログ：発進→破棄が実測18秒。正常は5〜6秒）。アボート判定は時間と
+     ピーク（蓄積済み状態）だけに依存し現在サンプルの妥当性に依存しないため、ガードの**外**で毎サンプル評価する。
+  3. **ARMEDラッチ遷移を純粋関数へ集約**。`confirmedStopped`/`readySince`/`poorGPSGraceSince` の遷移は
+     handleGPS 内の複数ブランチに散在し（実走のたびに例外を継ぎ足してv0.1.28→58→64→66と変遷）バグの温床だった。
+     `TimerEngine.updateArmedLaunch(_:...)`（nonisolated・inout）に一元化し `TimerEngineLaunchTests` で
+     停車確認/赤発進/トリガー/ロールング防止/猶予満了を網羅テスト。ラッチ自体はストレージとして保持
+     （ContentView の録画/READY表示が `confirmedStoppedWhileArmed` を参照するため）。
+  4. **実機未検証**（2026-06-22 時点）。次回実走で 01:09 のような「sAcc赤停車→発進」が拾えるか、緑の通常発進
+     （01:05/01:07）の精度に回帰が無いかを debug.csv/accel で要確認。
 - t=0 は `lookBackStartTime` でリングバッファの静止→加速の立ち上がり点へ遡って
   アンカー（高精度）。静止区間が無い（GPS遅延）場合は加速度から速度0時刻へ
   バックエクストラポレーション。

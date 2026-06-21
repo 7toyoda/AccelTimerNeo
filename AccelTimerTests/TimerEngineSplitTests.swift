@@ -85,12 +85,17 @@ final class TimerEngineSplitTests: XCTestCase {
         XCTAssertEqual(TimerEngine.launchThresholdMs(speedAccuracyMs: 1.8), 13.0 / 3.6, accuracy: 1e-9)
     }
 
-    /// 停車確認はDoppler速度精度で判定する。水平精度は座標品質なのでここでは使わない。
+    /// 停車確認 Path A：Doppler速度精度が良好なときはDoppler速度だけで判定する。
+    /// （sAcc赤時の位置ベース Path B は TimerEngineLaunchTests で検証）
     func testStoppedConfirmationUsesDopplerSpeedAccuracy() {
-        XCTAssertTrue(TimerEngine.shouldConfirmStopped(speedMs: 0.0, speedAccuracyMs: 0.31))
-        XCTAssertTrue(TimerEngine.shouldConfirmStopped(speedMs: 0.9, speedAccuracyMs: 0.31))
-        XCTAssertFalse(TimerEngine.shouldConfirmStopped(speedMs: 1.2, speedAccuracyMs: 0.31))
-        XCTAssertFalse(TimerEngine.shouldConfirmStopped(speedMs: 0.0, speedAccuracyMs: 2.0))
+        XCTAssertTrue(TimerEngine.shouldConfirmStopped(speedMs: 0.0, speedAccuracyMs: 0.31,
+                                                       positionSpeedKmh: 0, positionSpeedValid: false))
+        XCTAssertTrue(TimerEngine.shouldConfirmStopped(speedMs: 0.9, speedAccuracyMs: 0.31,
+                                                       positionSpeedKmh: 0, positionSpeedValid: false))
+        XCTAssertFalse(TimerEngine.shouldConfirmStopped(speedMs: 1.2, speedAccuracyMs: 0.31,
+                                                        positionSpeedKmh: 0, positionSpeedValid: false))
+        XCTAssertFalse(TimerEngine.shouldConfirmStopped(speedMs: 0.0, speedAccuracyMs: 2.0,
+                                                        positionSpeedKmh: 0, positionSpeedValid: false))
     }
 
     /// 停車確認済みからGPS速度精度が赤のまま発進した直後は、緑へ戻るまで短時間だけラッチを保持する。

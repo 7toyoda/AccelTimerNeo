@@ -9,5 +9,5 @@
 // CURRENT_PROJECT_VERSION = ビルド番号。App Store / TestFlight 提出ごとに一意・増加が必須。
 //   git のコミット数で採番する：  Scripts/set_build_number.sh を実行（= git rev-list --count HEAD）。
 
-MARKETING_VERSION = 0.1.66
+MARKETING_VERSION = 0.1.67
 CURRENT_PROJECT_VERSION = 61

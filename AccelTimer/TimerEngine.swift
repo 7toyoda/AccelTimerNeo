@@ -67,6 +67,9 @@ final class TimerEngine {
     private var posAnchorCoord: CLLocationCoordinate2D?
     private var posAnchorTime: Date = .distantPast
     private var positionSpeedKmh: Double = 0
+    // positionSpeedKmh が実測値（座標距離から算出）で一度でも更新されたか。
+    // 初期値0を「停車」と誤用しないため、停車確認の位置ベース経路はこのフラグが立ってから有効化する。
+    private var positionSpeedValid = false
 
     // センサーフュージョン（カルマンフィルタ）
     private var kalman = SpeedKalmanFilter()
@@ -212,17 +215,39 @@ final class TimerEngine {
     /// 上限 1.4 m/s(=5km/h)：精度不良(sAcc大)時の誤停車判定を防ぐ。発進トリガー(>5km/h)より下。
     static let stoppedSpeedFloorMs = 1.0
     static let stoppedSpeedCapMs = 1.4
+    /// 位置ベース停車経路のしきい値(km/h)。座標が約1秒でこの速度相当より動いていなければ停車とみなす。
+    /// 生GPS速度の下限(3.6km/h)と揃え、徐行(>=この値)を停車扱いしない。
+    static let positionStoppedKmh = 3.6
     /// sAcc(m/s) に応じた停車しきい値(m/s)。floor..cap にクランプ。
     nonisolated static func stoppedThresholdMs(speedAccMs: Double) -> Double {
         max(stoppedSpeedFloorMs, min(speedAccMs, stoppedSpeedCapMs))
     }
 
-    /// Doppler速度だけで停車確認できるか。水平精度(hAcc)は座標品質であり、
-    /// Doppler速度精度(sAcc)が良好なら停車判定には使わない。
-    nonisolated static func shouldConfirmStopped(speedMs: Double, speedAccuracyMs: Double) -> Bool {
-        speedAccuracyMs >= 0
-        && speedAccuracyMs < 2.0
-        && speedMs < stoppedThresholdMs(speedAccMs: speedAccuracyMs)
+    /// 停車確認できるか。2経路の論理和。
+    /// A) Doppler速度精度(sAcc)が良好(<2.0)なら、従来通りDoppler速度だけで即確認（高速・低遅延）。
+    /// B) sAccが赤(>=2.0)でも、生GPS速度≈0 かつ 位置ベース速度≈0（座標が動いていない）なら停車確認。
+    ///    sAccはiOSで停車直後に赤へ張り付く既知の癖があり、A だけだと永遠に停車確認できず発進を取りこぼす。
+    ///    位置ベース速度(positionSpeedKmh)はsAccと独立した真値。赤時の偽高速グリッチは生速度が高く出るため
+    ///    B を通らず、誤確認しない。位置速度がまだ未確定(positionSpeedValid=false)の間は B を使わない。
+    nonisolated static func shouldConfirmStopped(
+        speedMs: Double,
+        speedAccuracyMs: Double,
+        positionSpeedKmh: Double,
+        positionSpeedValid: Bool
+    ) -> Bool {
+        // Path A: Doppler速度精度が良好
+        if speedAccuracyMs >= 0
+            && speedAccuracyMs < 2.0
+            && speedMs < stoppedThresholdMs(speedAccMs: speedAccuracyMs) {
+            return true
+        }
+        // Path B: sAcc赤でも位置が動いていない＝停車
+        if positionSpeedValid
+            && speedMs < stoppedSpeedFloorMs
+            && positionSpeedKmh < positionStoppedKmh {
+            return true
+        }
+        return false
     }
 
     /// 速度しきい値クロス時刻を線形補間で算出する純粋関数（テスト対象）。
@@ -269,6 +294,87 @@ final class TimerEngine {
     nonisolated static func isFakeDopplerSpeed(speedKmh: Double, positionSpeedKmh: Double?) -> Bool {
         guard let positionSpeedKmh else { return false }
         return speedKmh > 30.0 && positionSpeedKmh < speedKmh * 0.4
+    }
+
+    // MARK: - ARMED 発進遷移（集約・テスト対象）
+    /// ARMED 中の「停車確認 → READY → 発進トリガー」を司る可変ラッチ群。
+    /// 以前は handleGPS 内の複数ブランチに散在し、実走のたびに例外を継ぎ足してバグの温床だった。
+    /// ここに集約し純粋関数 updateArmedLaunch で一元的に遷移させる（ユニットテスト対象）。
+    struct ArmedLaunch {
+        var confirmedStopped: Bool
+        var readySince: Date?
+        var poorGPSGraceSince: Date?
+    }
+    enum ArmedLaunchLog { case none, poorGPSGrace, poorGPSExpired }
+    struct ArmedLaunchResult {
+        var shouldTrigger: Bool      // startMeasurement を発火すべき
+        var didConfirmStop: Bool     // この更新で停車確認が成立（表示推定ラッチをリセット）
+        var log: ArmedLaunchLog
+    }
+
+    /// ARMED ラッチの遷移を計算する唯一の場所。順序を保つ：①停車確認 →②赤GPS移動でラッチ解除/猶予
+    /// →③発進トリガー判定 →④明確な走行でラッチ解除（走行中READY防止）。
+    /// 表示・センサー副作用は持たず、ラッチ(inout)と判定結果だけを返す。
+    nonisolated static func updateArmedLaunch(
+        _ s: inout ArmedLaunch,
+        speedMs: Double,
+        speedKmh: Double,
+        speedAccuracyMs: Double,
+        positionSpeedKmh: Double,
+        positionSpeedValid: Bool,
+        dopplerLooksFake: Bool,
+        timestamp: Date
+    ) -> ArmedLaunchResult {
+        var result = ArmedLaunchResult(shouldTrigger: false, didConfirmStop: false, log: .none)
+
+        // ① 停車確認（Doppler精度良好 or 位置が動いていない）
+        if shouldConfirmStopped(speedMs: speedMs, speedAccuracyMs: speedAccuracyMs,
+                                positionSpeedKmh: positionSpeedKmh,
+                                positionSpeedValid: positionSpeedValid) {
+            if !s.confirmedStopped { s.readySince = timestamp }
+            s.confirmedStopped = true
+            s.poorGPSGraceSince = nil
+            result.didConfirmStop = true
+        }
+
+        // ② GPS精度が赤のまま車が動いた → 停車ラッチ解除。ただし停車確認済み直後の赤発進は短時間保持。
+        if speedAccuracyMs >= 2.0 && speedMs > stoppedSpeedCapMs {
+            if s.confirmedStopped {
+                let graceStart = s.poorGPSGraceSince ?? timestamp
+                s.poorGPSGraceSince = graceStart
+                if shouldPreserveStoppedLatchDuringPoorGPS(
+                    wasConfirmedStopped: true,
+                    movingDuration: timestamp.timeIntervalSince(graceStart)) {
+                    result.log = .poorGPSGrace
+                } else {
+                    s.confirmedStopped = false
+                    s.readySince = nil
+                    s.poorGPSGraceSince = nil
+                    result.log = .poorGPSExpired
+                }
+            } else {
+                s.confirmedStopped = false
+                s.readySince = nil
+                s.poorGPSGraceSince = nil
+            }
+        }
+
+        // ③ 発進トリガー判定（停車確認後 readyHold 経過・しきい値超・GPS緑・偽Dopplerでない）
+        let readyLongEnough = s.readySince.map { timestamp.timeIntervalSince($0) >= readyHoldSec } ?? false
+        if s.confirmedStopped && readyLongEnough
+            && speedMs > launchThresholdMs(speedAccuracyMs: speedAccuracyMs)
+            && speedAccuracyMs < 2.0 && !dopplerLooksFake {
+            result.shouldTrigger = true
+            return result
+        }
+
+        // ④ RUNNINGに入らず明確に動いているなら停車ラッチを解除（走行中READYを防ぐ）
+        let armedSpeedAccGood = speedAccuracyMs >= 0 && speedAccuracyMs < 2.0
+        if armedSpeedAccGood && speedKmh > 15.0 {
+            s.confirmedStopped = false
+            s.readySince = nil
+        }
+        return result
     }
 
     init() {
@@ -352,6 +458,12 @@ final class TimerEngine {
         motionToWallOffset = 0     // 次のGPS更新で即座に再取得される
         ringBuffer.removeAll(keepingCapacity: true)
         lpfWindow.removeAll()
+        // 位置ベース速度のアンカーも作り直す（一時停止中に移動していた場合の古い距離で
+        // 誤った位置速度を出さないため）。次のGPSサンプルでアンカーを張り直す。
+        posAnchorCoord = nil
+        posAnchorTime  = .distantPast
+        positionSpeedKmh = 0
+        positionSpeedValid = false
         confirmedStoppedWhileArmed = false
         readySince = nil
         poorGPSLaunchGraceSince = nil
@@ -479,6 +591,7 @@ final class TimerEngine {
             rememberGPSSample = false
         } else if let nextPosAnchorCoord, let nextPosAnchorTime, let currentPositionSpeedKmh {
             positionSpeedKmh = currentPositionSpeedKmh
+            positionSpeedValid = true
             posAnchorCoord = nextPosAnchorCoord
             posAnchorTime = nextPosAnchorTime
         }
@@ -529,50 +642,31 @@ final class TimerEngine {
                 fusedSpeedKmh = max(fusedSpeedKmh, armedLaunchKmh)
             }
 
-            // GPS速度精度が良好（sAcc < 2.0）かつ速度が停車しきい値以内 → 停車確認。
-            // hAcc は座標品質なので、Doppler速度が信頼できる時の停車確認には使わない。
-            // しきい値は floor(1.0m/s)..cap(1.4m/s)。floorが無いと精度良好時に駐車中GPS揺らぎで停車不成立
-            if Self.shouldConfirmStopped(speedMs: speedMs, speedAccuracyMs: speedAccuracyMs) {
-                if !confirmedStoppedWhileArmed {
-                    readySince = timestamp
-                }
-                confirmedStoppedWhileArmed = true
-                // 停車が確定＝偽発進推定（段差等）を解除して0へ戻す
+            // 停車確認 → READY → 発進トリガーの遷移は集約した純粋関数で一元的に計算する。
+            // ラッチはストレージとして保持し（ContentView の録画/READY表示が参照）、遷移だけ委譲。
+            var launch = ArmedLaunch(confirmedStopped: confirmedStoppedWhileArmed,
+                                     readySince: readySince,
+                                     poorGPSGraceSince: poorGPSLaunchGraceSince)
+            let launchResult = Self.updateArmedLaunch(
+                &launch,
+                speedMs: speedMs, speedKmh: speedKmh, speedAccuracyMs: speedAccuracyMs,
+                positionSpeedKmh: positionSpeedKmh, positionSpeedValid: positionSpeedValid,
+                dopplerLooksFake: dopplerLooksFake, timestamp: timestamp)
+            confirmedStoppedWhileArmed = launch.confirmedStopped
+            readySince = launch.readySince
+            poorGPSLaunchGraceSince = launch.poorGPSGraceSince
+            // 停車確定＝偽発進推定（段差等）を解除して表示を0へ戻す（表示専用ラッチ）
+            if launchResult.didConfirmStop {
                 armedLaunchActive = false
                 armedLaunchKmh = 0
-                poorGPSLaunchGraceSince = nil
             }
-            // GPS精度が赤（sAcc >= 2.0）のまま車が動いた場合は停車確認をリセット
-            // ただし、停車確認済みから赤GPSのまま発進した直後だけは短時間保持する。
-            // GPSが緑へ戻った時点で発進トリガーでき、走行中ARMEDの取りこぼしを防げる。
-            if speedAccuracyMs >= 2.0 && speedMs > 1.4 {
-                if confirmedStoppedWhileArmed {
-                    let graceStart = poorGPSLaunchGraceSince ?? timestamp
-                    poorGPSLaunchGraceSince = graceStart
-                    if Self.shouldPreserveStoppedLatchDuringPoorGPS(
-                        wasConfirmedStopped: true,
-                        movingDuration: timestamp.timeIntervalSince(graceStart)
-                    ) {
-                        gpsLogEvent = "GPS_POOR_LAUNCH_GRACE"
-                    } else {
-                        confirmedStoppedWhileArmed = false
-                        readySince = nil
-                        poorGPSLaunchGraceSince = nil
-                        gpsLogEvent = "GPS_POOR_LAUNCH_EXPIRED"
-                    }
-                } else {
-                    confirmedStoppedWhileArmed = false
-                    readySince = nil
-                    poorGPSLaunchGraceSince = nil
-                }
+            switch launchResult.log {
+            case .poorGPSGrace:   gpsLogEvent = "GPS_POOR_LAUNCH_GRACE"
+            case .poorGPSExpired: gpsLogEvent = "GPS_POOR_LAUNCH_EXPIRED"
+            case .none:           break
             }
-            // 停車確認後、低速クリープを拾わない13km/hで計測開始。
-            let launchThresholdMs = Self.launchThresholdMs(speedAccuracyMs: speedAccuracyMs)
-            let readyLongEnough = readySince.map { timestamp.timeIntervalSince($0) >= Self.readyHoldSec } ?? false
-            // speedAccuracyMs < 2.0: UI の「GPS確認中（赤）」表示中は発進トリガーを禁止
-            // hAcc<30 でも sAcc>=2.0 の場合（GPS起動直後）に計測が開始されるのを防ぐ
-            if confirmedStoppedWhileArmed && readyLongEnough && speedMs > launchThresholdMs
-                && speedAccuracyMs < 2.0 && !dopplerLooksFake {
+            if launchResult.shouldTrigger {
+                let launchThresholdMs = Self.launchThresholdMs(speedAccuracyMs: speedAccuracyMs)
                 let gpsFallback = interpolatedStartTime(
                     threshold: launchThresholdMs,
                     prevSpeed: lastGPSSpeedMs, prevTime: lastGPSTime,
@@ -593,14 +687,19 @@ final class TimerEngine {
                                 curr: (speedMs, timestamp), source: "GPS")
                 }
             }
-            // ここまででRUNNINGに入らなかったのに明確に動いているなら、停車ラッチを解除する。
-            // 発進検知の機会を先に与えることで、通常の0発進を取りこぼさず、走行中READYだけを防ぐ。
-            if state == .armed && armedSpeedAccGood && speedKmh > 15.0 {
-                confirmedStoppedWhileArmed = false
-                readySince = nil
-            }
 
         case .running:
+            // 偽発進フェイルセーフ（微速クリープ対策）：GPS発進検知から launchConfirmSec 秒後に
+            // ピークが launchConfirmKmh 未満＝信号待ちの微速前進等で誤トリガーした計測。
+            // 判定は時間とピーク（蓄積済みの状態）だけに依存し現在サンプルの妥当性に依存しないため、
+            // dopplerLooksFake ガードの「外」で毎サンプル評価する。ガードの内側に置くと、クリープの
+            // 偽Dopplerサンプルで判定がスキップされ破棄が大幅に遅延する（実走で18秒の例を確認）。
+            if Self.shouldAbortFalseLaunch(launchDetectedAt: launchDetectedAt,
+                                           currentTime: timestamp,
+                                           peakSpeedKmh: peakSpeedKmh) {
+                abortRunDueToFalseLaunch()
+                return
+            }
             guard !dopplerLooksFake else {
                 gpsLogEvent = "GPS_FAKE_DOPPLER"
                 break
@@ -634,16 +733,6 @@ final class TimerEngine {
             // 停車検知：生GPS速度で判定（EMAラグなし）
             if speedKmh < 5.0 && !autoResetRequested && peakSpeedKmh >= 5.0 {
                 autoResetRequested = true
-            }
-            // 偽発進フェイルセーフ（微速クリープ対策）：GPS発進検知から launchConfirmSec 秒後に
-            // ピークが launchConfirmKmh 未満＝信号待ちの微速前進等で誤トリガーした計測。
-            // クリープは止まらず低速のまま進むこともあるため、現在速度は条件にしない。
-            if state == .running,
-               Self.shouldAbortFalseLaunch(launchDetectedAt: launchDetectedAt,
-                                           currentTime: timestamp,
-                                           peakSpeedKmh: peakSpeedKmh) {
-                abortRunDueToFalseLaunch()
-                return
             }
             // 加速中断検知：ピーク速度から大きく減速したらフル加速を中断したとみなし、
             // 計測を破棄して ARMED へ戻す（信号待ち・渋滞・巡航を挟んだ水増し計測を防止）。
@@ -1070,6 +1159,7 @@ final class TimerEngine {
         posAnchorCoord      = nil
         posAnchorTime       = .distantPast
         positionSpeedKmh    = 0
+        positionSpeedValid  = false
         kalman.reset()
         lastMotionTimestamp = 0
         accelSign           = 1.0
