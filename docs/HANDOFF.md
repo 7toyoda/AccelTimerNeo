@@ -5,7 +5,7 @@
 **変更前に該当箇所を読み、ここに書かれた意図的な設計を壊さないこと。** 記述と実
 コードが食い違う場合は実コードを正とし、本書を更新すること。
 
-最終更新時の状態: バージョン 0.1.50 系 / Swift 6 / SwiftUI / SwiftData / iOS 17+。
+最終更新時の状態: バージョン 0.1.51 系 / Swift 6 / SwiftUI / SwiftData / iOS 17+。
 リポジトリ: GitHub `toy0da/accel-timer`（main ブランチ運用）。
 
 ---
@@ -90,7 +90,9 @@
 「体験版」透かしを入れ、買い切りで透かしを除去する**。
 - 旧「履歴5件まで無料→超過でペイウォール」型は廃止。保存を課金で止める分岐は削除済み。
 - 課金判定は `StoreManager.isPurchased` / `showsWatermark` が中心。`ResultCardView` /
-  `CelebrationView` / `MeasurementDetailView` のカード共有で透かし有無を分岐する。
+  `CelebrationView` のカード共有で透かし有無を分岐する。履歴詳細の通常操作からは
+  結果カード共有を外している（ユーザー自身が使いたいと思わないため、履歴UIのノイズを
+  減らす判断）。
 - 買い切り（非消費型 IAP `com.acceltimer.app.AccelTimer.unlock`、¥800、StoreKit2）。
   ローカルテストは `AccelTimer.storekit` をスキームが参照。
 - `TrialKeychain.swift` は現在未使用（将来の不正防止用に残置）。
