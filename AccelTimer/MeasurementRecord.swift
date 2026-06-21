@@ -106,6 +106,16 @@ final class MeasurementRecord {
         }
     }
 
+    /// トライアル消費対象の「完走」判定。km/h は100km/h、mph は60mph 到達で1回消費する。
+    func completedTrialTarget(unit: SpeedUnit) -> Bool {
+        switch unit {
+        case .kmh:
+            return isComplete
+        case .mph:
+            return splitTime(unit: .mph, band: 3) != nil
+        }
+    }
+
     /// 高精度加速度タイムライン（CoreMotion 100Hz）。旧レコードは空。
     var accelTimeline: [AccelSample] {
         (try? JSONDecoder().decode([AccelSample].self, from: accelTimelineData)) ?? []

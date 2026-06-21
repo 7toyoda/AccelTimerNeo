@@ -42,7 +42,20 @@ final class StoreManager {
 
     /// 新しい計測を開始してよいか。
     /// 購入済み or 累計枠が残っている or（枠超過でも）今日まだ無料完走していない、なら可。
-    var canMeasure: Bool { isPurchased || !trialExhausted || !freeUsedToday }
+    var canMeasure: Bool {
+        Self.canMeasure(isPurchased: isPurchased,
+                        trialCount: trialCount,
+                        lastFreeDay: lastFreeDay,
+                        today: Self.todayString)
+    }
+
+    /// トライアル課金の開始可否判定。Keychain/StoreKit に依存しないためユニットテストで検証する。
+    nonisolated static func canMeasure(isPurchased: Bool,
+                                       trialCount: Int,
+                                       lastFreeDay: String,
+                                       today: String) -> Bool {
+        isPurchased || trialCount < freeTrialLimit || lastFreeDay != today
+    }
 
     /// 完走（headline 到達）した計測を 1 回ぶん記録する。購入済みなら何もしない。
     func registerCompletedMeasurement() {

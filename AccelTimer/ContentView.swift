@@ -155,12 +155,7 @@ struct MeasureView: View {
     /// 「最後まで」の定義は表示単位に従う：km/h は 100km/h 到達、mph は 60mph 到達。
     private func registerIfCompleted(prevSaved: MeasurementRecord?) {
         guard let saved = engine.lastSavedRecord, saved !== prevSaved else { return }
-        let reachedTarget: Bool
-        switch unit {
-        case .kmh: reachedTarget = saved.isComplete
-        case .mph: reachedTarget = saved.splitTime(unit: .mph, band: 3) != nil   // 60mph 到達
-        }
-        guard reachedTarget else { return }
+        guard saved.completedTrialTarget(unit: unit) else { return }
         store.registerCompletedMeasurement()
     }
 

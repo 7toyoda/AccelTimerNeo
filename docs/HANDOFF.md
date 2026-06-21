@@ -158,7 +158,7 @@
   `InfoPlist.xcstrings`）。`String(localized:)` の補間は %@ / %lld でキーが変わる点に注意。
   表示単位は `SpeedUnit` で km/h / mph を切り替える。中核計測・保存基準は km/h のまま。
 - **mph表示**: ライブ画面では0→15/30/45/60 mphを `TimerEngine.mphSplits` で並行追跡。
-  `MeasurementRecord` に `mphSplit15/30/45/60` として保存し、履歴・詳細・共有カードは
+  `MeasurementRecord` に `mphSplit15/30/45/60` として保存し、履歴・詳細は
   この高精度値を優先する。旧レコードのみ `speedTimeline` 補間へフォールバック。
 - **国コード記録**: `CountryGeocoder` が逆ジオコーディングで後追いバックフィル
   （将来の国別ランキング下準備）。

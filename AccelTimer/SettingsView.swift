@@ -124,8 +124,8 @@ struct SettingsView: View {
                         }
                         .pickerStyle(.segmented)
                         Text(selectedUnit == .mph
-                             ? "画面・履歴・共有カードを 0-60 mph 中心で表示します。計測完了判定は引き続き 100 km/h 到達です。"
-                             : "画面・履歴・共有カードを 0-100 km/h 中心で表示します。計測完了判定も 100 km/h 到達です。")
+                             ? "計測画面・履歴・詳細を 0-60 mph 中心で表示します。計測完了判定は引き続き 100 km/h 到達です。"
+                             : "計測画面・履歴・詳細を 0-100 km/h 中心で表示します。計測完了判定も 100 km/h 到達です。")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
