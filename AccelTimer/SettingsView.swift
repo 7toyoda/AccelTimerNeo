@@ -18,6 +18,25 @@ struct SettingsView: View {
     @State private var showMicDeniedAlert = false
     private var selectedUnit: SpeedUnit { SpeedUnit(rawValue: speedUnitRaw) ?? .kmh }
 
+#if DEBUG
+    /// 検証用：共有対象の診断ログ（debug.csv / debug_prev.csv / logs/*.csv のうち存在するもの）。
+    private var diagnosticLogURLs: [URL] {
+        let fm = FileManager.default
+        let docs = fm.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        var urls: [URL] = []
+        let debugDir = docs.appendingPathComponent("debug", isDirectory: true)
+        for name in ["debug.csv", "debug_prev.csv"] {
+            let u = debugDir.appendingPathComponent(name)
+            if fm.fileExists(atPath: u.path) { urls.append(u) }
+        }
+        let logsDir = docs.appendingPathComponent("logs", isDirectory: true)
+        if let files = try? fm.contentsOfDirectory(at: logsDir, includingPropertiesForKeys: nil) {
+            urls.append(contentsOf: files.filter { $0.pathExtension == "csv" }.sorted { $0.lastPathComponent < $1.lastPathComponent })
+        }
+        return urls
+    }
+#endif
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -132,6 +151,17 @@ struct SettingsView: View {
                             showPaywall = true
                         } label: {
                             Label("購入画面を表示", systemImage: "creditcard")
+                        }
+                        // 診断ログ（debug.csv＋走行ログ）をまとめて共有。AirDropでMacのDownloadsへ。
+                        if diagnosticLogURLs.isEmpty {
+                            Text("診断ログはまだありません")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        } else {
+                            ShareLink(items: diagnosticLogURLs) {
+                                Label("診断ログを共有（\(diagnosticLogURLs.count)件・AirDrop等）",
+                                      systemImage: "square.and.arrow.up.on.square")
+                            }
                         }
                     }
 #endif
