@@ -1,6 +1,7 @@
 import SwiftUI
 import SwiftData
 import AVFoundation
+import UIKit
 
 struct SettingsView: View {
     @Query private var records: [MeasurementRecord]
@@ -34,6 +35,46 @@ struct SettingsView: View {
             urls.append(contentsOf: files.filter { $0.pathExtension == "csv" }.sorted { $0.lastPathComponent < $1.lastPathComponent })
         }
         return urls
+    }
+
+    /// 検証用：診断ログを 1 つのフォルダにまとめ、ZIP 化した一時ファイルの URL を返す。
+    /// AirDrop 先（Mac のダウンロード直下）は送信側から指定できないため、フォルダ＝ZIP にして
+    /// 散らからないようにする（解凍するとフォルダになる）。
+    private func makeLogsZipURL() -> URL? {
+        let fm = FileManager.default
+        let urls = diagnosticLogURLs
+        guard !urls.isEmpty else { return nil }
+        let stampFmt = DateFormatter()
+        stampFmt.locale = Locale(identifier: "en_US_POSIX")
+        stampFmt.dateFormat = "yyyyMMdd_HHmmss"
+        let folderName = "AccelTimer-logs-\(stampFmt.string(from: Date()))"
+        let folder = fm.temporaryDirectory.appendingPathComponent(folderName, isDirectory: true)
+        try? fm.removeItem(at: folder)
+        guard (try? fm.createDirectory(at: folder, withIntermediateDirectories: true)) != nil else { return nil }
+        for u in urls {
+            try? fm.copyItem(at: u, to: folder.appendingPathComponent(u.lastPathComponent))
+        }
+        // NSFileCoordinator(.forUploading) はフォルダを ZIP 化した一時ファイルを渡す
+        var zipURL: URL?
+        var coordErr: NSError?
+        NSFileCoordinator().coordinate(readingItemAt: folder, options: [.forUploading], error: &coordErr) { tmpZip in
+            let dest = fm.temporaryDirectory.appendingPathComponent("\(folderName).zip")
+            try? fm.removeItem(at: dest)
+            if (try? fm.copyItem(at: tmpZip, to: dest)) != nil { zipURL = dest }
+        }
+        return zipURL
+    }
+
+    /// 共有シートを表示してログ ZIP を AirDrop 等で送る。
+    private func shareLogsZip() {
+        guard let zip = makeLogsZipURL() else { return }
+        let av = UIActivityViewController(activityItems: [zip], applicationActivities: nil)
+        guard let scene = UIApplication.shared.connectedScenes
+                .compactMap({ $0 as? UIWindowScene }).first(where: { $0.activationState == .foregroundActive }),
+              let root = scene.keyWindow?.rootViewController else { return }
+        av.popoverPresentationController?.sourceView = root.view   // iPad 用アンカー
+        av.popoverPresentationController?.sourceRect = CGRect(x: root.view.bounds.midX, y: root.view.bounds.midY, width: 0, height: 0)
+        root.present(av, animated: true)
     }
 #endif
 
@@ -152,14 +193,17 @@ struct SettingsView: View {
                         } label: {
                             Label("購入画面を表示", systemImage: "creditcard")
                         }
-                        // 診断ログ（debug.csv＋走行ログ）をまとめて共有。AirDropでMacのDownloadsへ。
+                        // 診断ログ（debug.csv＋走行ログ）を1個のZIPにまとめて共有。
+                        // AirDrop先（Macのダウンロード直下）は指定不可なので、解凍でフォルダになるZIPにする。
                         if diagnosticLogURLs.isEmpty {
                             Text("診断ログはまだありません")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         } else {
-                            ShareLink(items: diagnosticLogURLs) {
-                                Label("診断ログを共有（\(diagnosticLogURLs.count)件・AirDrop等）",
+                            Button {
+                                shareLogsZip()
+                            } label: {
+                                Label("診断ログをZIPで共有（\(diagnosticLogURLs.count)件・AirDrop等）",
                                       systemImage: "square.and.arrow.up.on.square")
                             }
                         }
