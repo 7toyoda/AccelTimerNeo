@@ -159,9 +159,16 @@ struct MeasureView: View {
         presentCelebrationIfNewBest(prevBest: prevBest, prevMphBest: prevMphBest, prevSaved: prevSaved)
     }
 
-    /// 直前の保存が「新規の完走レコード」なら無料枠を1回消費する。
+    /// 直前の保存が「最後まで到達した新規レコード」なら無料枠を1回消費する。
+    /// 「最後まで」の定義は表示単位に従う：km/h は 100km/h 到達、mph は 60mph 到達。
     private func registerIfCompleted(prevSaved: MeasurementRecord?) {
-        guard let saved = engine.lastSavedRecord, saved !== prevSaved, saved.isComplete else { return }
+        guard let saved = engine.lastSavedRecord, saved !== prevSaved else { return }
+        let reachedTarget: Bool
+        switch unit {
+        case .kmh: reachedTarget = saved.isComplete
+        case .mph: reachedTarget = saved.splitTime(unit: .mph, band: 3) != nil   // 60mph 到達
+        }
+        guard reachedTarget else { return }
         store.registerCompletedMeasurement()
     }
 
@@ -549,6 +556,16 @@ struct MeasureView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
             Spacer()
+            if let txt = freeTrialStatusText {
+                Button { showPaywall = true } label: {
+                    Text(txt)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(store.canMeasure ? Color.secondary : Color.orange)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(.white.opacity(0.08), in: Capsule())
+                }
+            }
             if isVideoRecording {
                 HStack(spacing: 4) {
                     Circle()
@@ -564,6 +581,17 @@ struct MeasureView: View {
                 .foregroundStyle(.secondary)
                 .textCase(.uppercase)
         }
+    }
+
+    /// ステータスバーの無料枠表示（購入済みは非表示）。タップでペイウォール。
+    private var freeTrialStatusText: String? {
+        guard !store.isPurchased else { return nil }
+        if store.trialExhausted {
+            return store.freeUsedToday
+                ? String(localized: "本日無料分: 使用済み")
+                : String(localized: "本日無料: あと1回")
+        }
+        return String(localized: "無料 残り\(store.freeTrialRemaining)/\(StoreManager.freeTrialLimit)")
     }
 
     private var isRunning: Bool { engine.state == .running }
