@@ -59,9 +59,12 @@ final class DebugLogger {
         rotateIfNeeded()
     }
 
+    // wall_time は端末ローカル時刻で出力する（例: 2026-06-21T20:09:49.080+09:00）。
+    // 解析時に時差換算が不要になる。
     private static let iso: ISO8601DateFormatter = {
         let f = ISO8601DateFormatter()
         f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        f.timeZone = .current
         return f
     }()
 

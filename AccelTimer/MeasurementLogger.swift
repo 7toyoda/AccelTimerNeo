@@ -106,8 +106,10 @@ final class MeasurementLogger {
         let filename = "accel_\(fileFmt.string(from: recordDate)).csv"
         let url = logsDir.appendingPathComponent(filename)
 
+        // wall_time は端末ローカル時刻で出力（ファイル名のローカル時刻と一致させ、解析時の時差換算を不要に）
         let isoFmt = ISO8601DateFormatter()
         isoFmt.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        isoFmt.timeZone = .current
 
         var lines = [
             "# AccelTimer v\(AppInfo.version)",
