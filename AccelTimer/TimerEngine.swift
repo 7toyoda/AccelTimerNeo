@@ -637,11 +637,12 @@ final class TimerEngine {
                       speedMps: speedMs, accMps: speedAccuracyMs, hAccM: hAcc,
                       accelSign: accelSign, kalmanMps: kalman.speedMs,
                       displayKmh: fusedSpeedKmh, event: gpsLogEvent)
+        let debugEvent = debugEventWithArmedDisplay(gpsLogEvent)
         // 常時ログ（計測の保存有無に関わらず追記。未トリガー時の調査用）
         DebugLogger.shared.logGPS(state: stateName, gpsMps: speedMs, accMps: speedAccuracyMs,
                                   hAccM: hAcc, speedKmh: speedKmh, peakKmh: peakSpeedKmh,
                                   confirmedStopped: confirmedStoppedWhileArmed,
-                                  deviceSteady: deviceSteadyWhileArmed, event: gpsLogEvent)
+                                  deviceSteady: deviceSteadyWhileArmed, event: debugEvent)
         // 待機中/IDLE/完了直後のGPS値(≤1Hz)は画面表示にも即反映（間引き対象外）
         displaySpeedKmh = fusedSpeedKmh
     }
@@ -653,6 +654,21 @@ final class TimerEngine {
         case .running:  return "RUNNING"
         case .finished: return "FINISHED"
         }
+    }
+
+    private func debugEventWithArmedDisplay(_ event: String) -> String {
+        guard state == .armed else { return event }
+        let display: String
+        if gpsSpeedAccuracy < 0 || gpsSpeedAccuracy >= 2.0 {
+            display = "GPS_CHECK"
+        } else if confirmedStoppedWhileArmed && fusedSpeedKmh < 2.0 {
+            display = "READY"
+        } else if fusedSpeedKmh >= 3.0 {
+            display = "DRIVING"
+        } else {
+            display = "CONFIRMING_STOP"
+        }
+        return event.isEmpty ? "UI=\(display)" : "\(event) UI=\(display)"
     }
 
     // MARK: - Motion handler

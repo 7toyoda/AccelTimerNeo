@@ -5,17 +5,18 @@
 **変更前に該当箇所を読み、ここに書かれた意図的な設計を壊さないこと。** 記述と実
 コードが食い違う場合は実コードを正とし、本書を更新すること。
 
-最終更新時の状態: バージョン 0.1.64 系 / Swift 6 / SwiftUI / SwiftData / iOS 17+。
+最終更新時の状態: バージョン 0.1.65 系 / Swift 6 / SwiftUI / SwiftData / iOS 17+。
 リポジトリ: GitHub `toy0da/accel-timer`（private・main ブランチ運用）。
 作業コピーは dev（`/Users/user01/dev/AccelTimer`・Xcode用）と Codex（`work/accel-timer`）の
 2つ。push したら両者を同期する（dev で push → Codex 側を `git pull --ff-only`）。
 
-**このセッション（〜v0.1.64）の主な変更:** ①課金を透かしモデル→トライアル課金へ全面変更
+**このセッション（〜v0.1.65）の主な変更:** ①課金を透かしモデル→トライアル課金へ全面変更
 （§7）。②停車確認しきい値に下限を追加し「停車してください」頻発を解消（§2, v0.1.58）。
 ③mph 単位対応（§10）。④バージョンを xcconfig に集約（§13）。⑤ログの wall_time を端末
 ローカル時刻に統一（§14, v0.1.60）。⑥検証用に「トライアルリセット」「診断ログ ZIP 共有」
 を `#if DEBUG` で追加（§10/§12）。⑦ARMED表示と低速誤発進を再調整し、5〜10km/hの徐行や
-hAcc悪化時の「停車してください」連発を抑制（§2/§5, v0.1.64）。
+hAcc悪化時の「停車してください」連発を抑制（§2/§5, v0.1.64）。⑧次回実走調査用に
+debug.csv の event 欄へ ARMED中のUI表示状態を記録（§14, v0.1.65）。
 
 ---
 
@@ -224,5 +225,7 @@ TestAction に含まれる。新規ロジックは可能な限り純粋関数に
 gps_mps, gps_acc_mps, h_acc_m, speed_kmh, peak_kmh, conf_stopped, dev_steady, event）と
 `logs/accel_*.csv`（計測ごと：wall_time, elapsed_s, source(GPS/MOTION/EVENT),
 gps_speed_mps, gps_acc_mps, h_acc_m, accel_mps2, accel_sign, kalman_mps, display_kmh,
-event）を Downloads の日付フォルダに格納して共有する。Python で解析し、速度
+event）を Downloads の日付フォルダに格納して共有する。v0.1.65以降、ARMED中のdebug.csv
+GPS行は event 欄に `UI=READY` / `UI=DRIVING` / `UI=CONFIRMING_STOP` / `UI=GPS_CHECK`
+を出す（既存CSVヘッダを壊さないため列追加ではなくevent欄へ追記）。Python で解析し、速度
 プロファイル・スプリット・GPS精度・誤発進などを検証してから修正するのが定石。
