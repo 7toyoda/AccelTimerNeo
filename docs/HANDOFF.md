@@ -298,9 +298,16 @@ GPS行は event 欄に `UI=READY` / `UI=DRIVING` / `UI=CONFIRMING_STOP` / `UI=GP
 **順序（重要）**: v0.1.67〜0.1.70 は実機未検証。**まず実走でv0.1.67（発進検出の根本修正）の効果と回帰を確認してから**
 分解に着手する（未検証変更の上に大きなリファクタを積むと切り分け不能になるため）。
 
+**進捗（2026-06-22 実機検証後）**: v0.1.70を実走(0622_134836)で検証。計測coreは良好（クリーン完走多数・
+赤sAcc停車→42km/h発進の救済が成功）。表示層の不整合を1件確認（停車確認済みなのにUI=GPS確認中／走行中）し、
+**v0.1.71で表示STATEを `TimerEngine.armedPhase` に一本化して根治**（UI/診断ログ/速度表示が単一の真実を参照。
+confirmedStopped・生GPS速度・GPS可用性・赤猶予から導出。ContentViewのgpsIsRed優先ゲートとArmedDisplay enumを撤去）。
+**残り＝下記①の「速度変数の構造抽出」**（armedPhaseは表示STATEの一本化まで。fusedSpeedKmh等5変数のクラス分離は未着手）。
+
 **分解ターゲット（優先順・各段はビルド/テストで保護）**:
 1. **DisplaySmoother**（最優先・最も絡まる）: 表示5変数＋多段平滑化（GPS EMA→motion外挿→GPS再アンカー）＋
    FINISH区間補間(`finishSeg*`)をここへ。計測精度ロジックと独立なので低リスク高効果。
+   ※表示STATE（READY/走行中等の判定）は v0.1.71 で `armedPhase` に一本化済み。残るは速度値そのものの平滑化系統。
 2. **SpeedFusion**: GPS EMA＋Kalman＋位置検算(`positionSpeedKmh`)＋`dopplerLooksFake`。
 3. **LaunchDetector**: `updateArmedLaunch`（v0.1.67で抽出済）の状態保持ごと移設を完了。
 4. **LookbackAnchor**: モーションリングバッファ＋t=0 アンカリング(`lookBackStartTime`)。
