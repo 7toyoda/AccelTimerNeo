@@ -1,0 +1,60 @@
+{
+  "identifier": "11E2020B-DD5A-48EA-9286-821F3F1F62F4",
+  "nonRenewingSubscriptions": [],
+  "products": [
+    {
+      "displayPrice": "800",
+      "familyShareable": false,
+      "internalID": "AT0001",
+      "localizations": [
+        {
+          "description": "全機能を永久に解放します",
+          "displayName": "全機能解放",
+          "locale": "ja_JP"
+        },
+        {
+          "description": "Unlock all features permanently",
+          "displayName": "Full Unlock",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "com.acceltimer.app.AccelTimer.unlock",
+      "referenceName": "Full Unlock",
+      "type": "NonConsumable"
+    },
+    {
+      "displayPrice": "800",
+      "familyShareable": false,
+      "internalID": "ATX0001",
+      "localizations": [
+        {
+          "description": "全機能を永久に解放します",
+          "displayName": "全機能解放",
+          "locale": "ja_JP"
+        },
+        {
+          "description": "Unlock all features permanently",
+          "displayName": "Full Unlock",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "com.acceltimer.app.AccelTimerX.unlock",
+      "referenceName": "Full Unlock X",
+      "type": "NonConsumable"
+    }
+  ],
+  "settings": {
+    "_applicationInternalID": "",
+    "_developerTeamID": "",
+    "_failTransactionsEnabled": false,
+    "_lastSynchronizedDate": 0,
+    "_locale": "ja_JP",
+    "_storefront": "JPN",
+    "_storeKitErrors": []
+  },
+  "subscriptionGroups": [],
+  "version": {
+    "major": 3,
+    "minor": 0
+  }
+}

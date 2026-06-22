@@ -52,7 +52,7 @@
          </BuildableReference>
       </BuildableProductRunnable>
       <StoreKitConfigurationFileReference
-         identifier = "../../AccelTimer/AccelTimer.storekit">
+         identifier = "../../AccelTimerX/AccelTimer.storekit">
       </StoreKitConfigurationFileReference>
    </LaunchAction>
    <ProfileAction

@@ -31,7 +31,7 @@
 			);
 			target = 594BB0002FC162D00009A57F /* AccelTimer */;
 		};
-		ACD100000000000000000002 /* Exceptions for "AccelTimer" folder in "AccelTimerX" target */ = {
+		ACD10000000000000000000A /* Exceptions for "AccelTimerX" folder in "AccelTimerX" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
@@ -45,7 +45,6 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				594BB02C2FC1A40E0009A57F /* Exceptions for "AccelTimer" folder in "AccelTimer" target */,
-				ACD100000000000000000002 /* Exceptions for "AccelTimer" folder in "AccelTimerX" target */,
 			);
 			path = AccelTimer;
 			sourceTree = "<group>";
@@ -53,6 +52,14 @@
 		AC7E000000000000000000A6 /* AccelTimerTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = AccelTimerTests;
+			sourceTree = "<group>";
+		};
+		ACD10000000000000000000B /* AccelTimerX */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				ACD10000000000000000000A /* Exceptions for "AccelTimerX" folder in "AccelTimerX" target */,
+			);
+			path = AccelTimerX;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -87,6 +94,7 @@
 			children = (
 				ACC0F1600000000000000001 /* Config/Version.xcconfig */,
 				594BB0032FC162D00009A57F /* AccelTimer */,
+				ACD10000000000000000000B /* AccelTimerX */,
 				AC7E000000000000000000A6 /* AccelTimerTests */,
 				594BB0022FC162D00009A57F /* Products */,
 			);
@@ -140,7 +148,7 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				594BB0032FC162D00009A57F /* AccelTimer */,
+				ACD10000000000000000000B /* AccelTimerX */,
 			);
 			name = AccelTimerX;
 			packageProductDependencies = (
@@ -477,7 +485,7 @@
 				DEVELOPMENT_TEAM = L997D8UHF6;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = AccelTimer/Info.plist;
+				INFOPLIST_FILE = AccelTimerX/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "$(ACCELTIMERX_APP_DISPLAY_NAME)";
 				INFOPLIST_KEY_CFBundleName = "$(ACCELTIMERX_APP_DISPLAY_NAME)";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "バックグラウンドでの計測継続のためにGPSを使用します";
@@ -513,7 +521,7 @@
 				DEVELOPMENT_TEAM = L997D8UHF6;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = AccelTimer/Info.plist;
+				INFOPLIST_FILE = AccelTimerX/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "$(ACCELTIMERX_APP_DISPLAY_NAME)";
 				INFOPLIST_KEY_CFBundleName = "$(ACCELTIMERX_APP_DISPLAY_NAME)";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "バックグラウンドでの計測継続のためにGPSを使用します";
