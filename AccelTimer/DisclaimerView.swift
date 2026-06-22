@@ -15,9 +15,9 @@ struct DisclaimerView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 18) {
                         VStack(spacing: 10) {
-                            Image(systemName: "exclamationmark.shield.fill")
+                            Image(systemName: "checkmark.shield.fill")
                                 .font(.system(size: 52))
-                                .foregroundStyle(.orange)
+                                .foregroundStyle(.cyan)
                             Text("安全運転と免責事項")
                                 .font(.system(size: 22, weight: .heavy, design: .rounded))
                                 .foregroundStyle(.white)
@@ -43,7 +43,9 @@ struct DisclaimerView: View {
                             .font(.system(size: 18, weight: .heavy, design: .rounded))
                             .frame(maxWidth: .infinity)
                             .frame(height: 54)
-                            .background(Color.orange, in: RoundedRectangle(cornerRadius: 14))
+                            .background(
+                                LinearGradient(colors: [.cyan, .blue], startPoint: .top, endPoint: .bottom),
+                                in: RoundedRectangle(cornerRadius: 14))
                             .foregroundStyle(.black)
                     }
                     if isFirstLaunch {
@@ -66,7 +68,7 @@ struct DisclaimerView: View {
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 15))
-                .foregroundStyle(.orange.opacity(0.9))
+                .foregroundStyle(.cyan.opacity(0.9))
                 .padding(.top, 2)
             Text(text)
                 .font(.callout)
