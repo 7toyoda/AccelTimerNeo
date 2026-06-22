@@ -283,3 +283,25 @@ GPS行は event 欄に `UI=READY` / `UI=DRIVING` / `UI=CONFIRMING_STOP` / `UI=GP
   CoreMotion 100Hz補間が継ぎ、偽発進アボートは適格サンプル到着時に発火する。**RUNNING中にGPSが数秒途切れたら
   debug.csv の処理時刻が固まる**ことを念頭に解析する（速度プロファイルは accel_*.csv の fix時刻を正とする）。
 - **debug.csv の処理時刻クラスタリングはバグではなく上記遅延の可視化**。直さず診断材料として使う。
+
+## 15. 今後のリファクタ計画（計測コードの分解・2026-06-22 合意）
+
+**現状の評価（計測値）**: `TimerEngine.swift` は約1300行・単一 `@MainActor` クラス・`var` 72個・`static let` 26個。
+`handleGPS` は単一281行。表示速度が `fusedSpeedKmh`/`displaySpeedKmh`/`gpsDisplayKmh`/`motionDisplayKmh`/
+`armedLaunchKmh`/`finishSeg*` の5〜6系統に分散。1クラスで GPS処理・Kalman融合・lookback・状態機械・スプリット
+補間・多段表示平滑化・FINISH補間・3種のabort・音声・触覚・永続化・履歴トリム・ログ＝約13責務を抱える God Object。
+
+**判断**: フルリライトは不要（精度が hard-won・既存の純粋関数8個＋テストという良い核がある・回帰リスク大）。
+代わりに**振る舞い不変の責務分解**を、既存の純粋関数の継ぎ目を使って段階的に行う。複雑さの多くは本質的
+（GPS不安定・センサー融合は本質的に状態を持つ）で消せない。偶発的複雑さ＝全部1クラス、を解く。
+
+**順序（重要）**: v0.1.67〜0.1.70 は実機未検証。**まず実走でv0.1.67（発進検出の根本修正）の効果と回帰を確認してから**
+分解に着手する（未検証変更の上に大きなリファクタを積むと切り分け不能になるため）。
+
+**分解ターゲット（優先順・各段はビルド/テストで保護）**:
+1. **DisplaySmoother**（最優先・最も絡まる）: 表示5変数＋多段平滑化（GPS EMA→motion外挿→GPS再アンカー）＋
+   FINISH区間補間(`finishSeg*`)をここへ。計測精度ロジックと独立なので低リスク高効果。
+2. **SpeedFusion**: GPS EMA＋Kalman＋位置検算(`positionSpeedKmh`)＋`dopplerLooksFake`。
+3. **LaunchDetector**: `updateArmedLaunch`（v0.1.67で抽出済）の状態保持ごと移設を完了。
+4. **LookbackAnchor**: モーションリングバッファ＋t=0 アンカリング(`lookBackStartTime`)。
+5. `TimerEngine` を「状態機械＋オーケストレーション」に痩せさせ、音声/触覚/永続化(`persistResult`/`trimHistory`)は分離。
