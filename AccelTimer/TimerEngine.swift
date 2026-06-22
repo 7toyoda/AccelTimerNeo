@@ -65,6 +65,10 @@ final class TimerEngine {
     // （READY/発進トリガー）には使わない。iOS がGPSを数秒以上バッチ配信する実走ログがあり、
     // 古い「停止」fixで走行中にREADY化するのを防ぐ。
     private var lastGPSProcessingAge: TimeInterval = .infinity
+    // armedPhase(READY/走行中の表示判定)が使う「最新GPS速度(km/h)」。
+    // lastGPSSpeedMs は handleGPS 末尾の defer で更新されるため、ログ/表示計算の時点では
+    // 1サンプル前の値（＝停車してもまだ走行中に見える原因）。こちらは switch/ログより前に同期更新する。
+    private var armedDisplayGPSSpeedKmh: Double = 0
 
     // 位置ベース速度の検算用アンカー（GPS Doppler の偽高速＝停車中なのに高速度 を検知する）。
     // 約1秒ごとに座標を採り、移動距離から実速度を概算。Doppler が高いのに位置が動いていなければ誤り。
@@ -441,7 +445,7 @@ final class TimerEngine {
     /// 現在の ARMED 表示フェーズ（UI・診断ログから参照）。
     var armedPhase: ArmedPhase {
         Self.armedPhase(confirmedStopped: confirmedStoppedWhileArmed,
-                        rawGpsSpeedKmh: lastGPSSpeedMs * 3.6,
+                        rawGpsSpeedKmh: armedDisplayGPSSpeedKmh,
                         gpsSpeedAccuracyMs: gpsSpeedAccuracy,
                         gpsSampleFresh: Self.isFreshLiveGPSSample(
                             processingAge: lastGPSProcessingAge,
@@ -523,6 +527,7 @@ final class TimerEngine {
         guard state == .armed else { return }
         // 一時停止中に溜まった可能性のある古いタイミングデータをリセット
         lastGPSSpeedMs = 0
+        armedDisplayGPSSpeedKmh = 0
         lastGPSTime    = .distantPast
         lastGPSProcessingAge = .infinity
         lastMotionTimestamp = 0
@@ -672,6 +677,10 @@ final class TimerEngine {
             posAnchorCoord = nextPosAnchorCoord
             posAnchorTime = nextPosAnchorTime
         }
+        // armedPhase 用の最新GPS速度を「同期的に」更新（defer の lastGPSSpeedMs より前）。
+        // 偽Doppler は除外（lastGPSSpeedMs と同じ rememberGPSSample 条件）。これで停車した瞬間に
+        // READY へ切り替わり、1サンプル分「走行中」が残る不具合を解消する。
+        if rememberGPSSample { armedDisplayGPSSpeedKmh = speedKmh }
 
         // カルマンフィルタは armed/running 中のみ更新。
         // 偽Dopplerは速度推定へ混ぜると後続のMotion splitにも波及するため除外する。
@@ -1247,6 +1256,7 @@ final class TimerEngine {
         fusedSpeedKmh       = 0
         startTime           = nil
         lastGPSSpeedMs      = 0
+        armedDisplayGPSSpeedKmh = 0
         lastGPSTime         = .distantPast
         lastGPSProcessingAge = .infinity
         posAnchorCoord      = nil

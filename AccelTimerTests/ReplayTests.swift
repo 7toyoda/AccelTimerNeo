@@ -164,4 +164,35 @@ final class ReplayTests: XCTestCase {
         XCTAssertEqual(readyDuringStop, settledStopSamples,
                        "落ち着いた停車・赤sAcc 区間が全てREADYになっていない（全パイプラインで取りこぼし）")
     }
+
+    // MARK: - 減速→停車の1サンプル遅延（「停車したのに走行中が残る」）回帰
+
+    /// iPhone16 実走 2026-06-22 22:02 由来。緑GPSで 12.8km/h から停車へ減速。
+    /// 録画時(v0.1.77)は停車直後の gps=0.0/conf=1 の1サンプルが `DRIVING`（走行中）になっていた。
+    /// 原因：`armedPhase` が読む `lastGPSSpeedMs` は handleGPS 末尾の defer で更新され、ログ/表示計算時には
+    /// 1サンプル前（直前の移動速度）だった。修正後は同期更新の `armedDisplayGPSSpeedKmh` を使い、
+    /// その瞬間に READY へ切り替わる。本テストは「現在サンプルの速度」で判定すれば停車サンプルが
+    /// READY になることを実データで固定する（エンジンが現在値を渡すことを保証する修正と対）。
+    private let fixtureDecel2202: [ReplaySample] = [
+        .init(rawKmh: 12.8, sAcc: 0.2000, conf: false, grace: false, loggedUI: "DRIVING"),
+        .init(rawKmh: 10.7, sAcc: 0.2000, conf: false, grace: false, loggedUI: "DRIVING"),
+        .init(rawKmh: 6.6,  sAcc: 1.6804, conf: false, grace: false, loggedUI: "DRIVING"),
+        .init(rawKmh: 5.7,  sAcc: 0.2000, conf: false, grace: false, loggedUI: "DRIVING"),
+        .init(rawKmh: 3.3,  sAcc: 0.2000, conf: true,  grace: false, loggedUI: "DRIVING"),
+        .init(rawKmh: 0.0,  sAcc: 0.2000, conf: true,  grace: false, loggedUI: "DRIVING"), // ←旧:走行中(バグ)
+        .init(rawKmh: 0.0,  sAcc: 0.2000, conf: true,  grace: false, loggedUI: "READY"),
+        .init(rawKmh: 0.0,  sAcc: 0.2000, conf: true,  grace: false, loggedUI: "READY"),
+        .init(rawKmh: 0.0,  sAcc: 0.2000, conf: true,  grace: false, loggedUI: "READY"),
+    ]
+
+    /// 停車サンプル（現在の生GPS<3km/h・停車確認済み・緑sAcc）は必ず READY。走行中(DRIVING)を出さない。
+    func testReplayDecel_stoppedSampleIsReadyNotDriving() {
+        var recovered = 0
+        for s in fixtureDecel2202 where s.conf && s.rawKmh < 3.0 && s.sAcc < 2.0 {
+            XCTAssertEqual(phase(s), .ready,
+                           "停車(生GPS\(s.rawKmh)・緑)なのにREADYでない＝走行中が残る")
+            if s.loggedUI == "DRIVING" { recovered += 1 }
+        }
+        XCTAssertGreaterThan(recovered, 0, "録画時にDRIVINGだった停車サンプルがREADYへ救済されていない")
+    }
 }
