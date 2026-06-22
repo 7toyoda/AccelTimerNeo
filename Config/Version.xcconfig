@@ -9,8 +9,8 @@
 // CURRENT_PROJECT_VERSION = ビルド番号。App Store / TestFlight 提出ごとに一意・増加が必須。
 //   git のコミット数で採番する：  Scripts/set_build_number.sh を実行（= git rev-list --count HEAD）。
 
-MARKETING_VERSION = 0.1.73
-CURRENT_PROJECT_VERSION = 63
+MARKETING_VERSION = 0.1.74
+CURRENT_PROJECT_VERSION = 64
 
 // アプリ表示名・Product名はターゲット側でこの変数を参照する。
 // AccelTimerX の名前を変える場合は下記2行を変更する。

@@ -156,4 +156,14 @@ final class TimerEngineSplitTests: XCTestCase {
         XCTAssertFalse(TimerEngine.isFreshLiveGPSSample(processingAge: 2.5))
         XCTAssertFalse(TimerEngine.isFreshLiveGPSSample(processingAge: -0.1))
     }
+
+    /// 元の AccelTimer では新しい実験的GPS鮮度ゲートを無効にし、従来挙動を維持する。
+    /// AccelTimerX のみ enabled=true で検証する。
+    func testExperimentalFreshnessGateCanBeDisabledForOriginalApp() {
+        XCTAssertTrue(TimerEngine.isFreshLiveGPSSample(processingAge: 20.0, enabled: false))
+        XCTAssertTrue(TimerEngine.canUseMotionSplit(
+            currentTime: base.addingTimeInterval(20.0),
+            lastGPSTime: base,
+            enabled: false))
+    }
 }

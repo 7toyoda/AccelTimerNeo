@@ -305,11 +305,15 @@ final class TimerEngine {
         return speedKmh > 30.0 && positionSpeedKmh < speedKmh * 0.4
     }
 
-    nonisolated static func isFreshLiveGPSSample(processingAge: TimeInterval) -> Bool {
-        processingAge >= 0 && processingAge <= maxLiveGPSSampleAgeSec
+    nonisolated static func isFreshLiveGPSSample(processingAge: TimeInterval,
+                                                 enabled: Bool = true) -> Bool {
+        guard enabled else { return true }
+        return processingAge >= 0 && processingAge <= maxLiveGPSSampleAgeSec
     }
 
-    nonisolated static func canUseMotionSplit(currentTime: Date, lastGPSTime: Date) -> Bool {
+    nonisolated static func canUseMotionSplit(currentTime: Date, lastGPSTime: Date,
+                                              enabled: Bool = true) -> Bool {
+        guard enabled else { return true }
         guard lastGPSTime != .distantPast else { return false }
         return currentTime.timeIntervalSince(lastGPSTime) <= maxMotionSplitGPSAgeSec
     }
@@ -439,7 +443,9 @@ final class TimerEngine {
         Self.armedPhase(confirmedStopped: confirmedStoppedWhileArmed,
                         rawGpsSpeedKmh: lastGPSSpeedMs * 3.6,
                         gpsSpeedAccuracyMs: gpsSpeedAccuracy,
-                        gpsSampleFresh: Self.isFreshLiveGPSSample(processingAge: lastGPSProcessingAge),
+                        gpsSampleFresh: Self.isFreshLiveGPSSample(
+                            processingAge: lastGPSProcessingAge,
+                            enabled: AppInfo.isAccelTimerX),
                         inPoorGPSLaunchGrace: poorGPSLaunchGraceSince != nil)
     }
 
@@ -607,7 +613,8 @@ final class TimerEngine {
                            coordinate: CLLocationCoordinate2D) {
         let processingAge = Date().timeIntervalSince(timestamp)
         lastGPSProcessingAge = processingAge
-        let gpsSampleFresh = Self.isFreshLiveGPSSample(processingAge: processingAge)
+        let gpsSampleFresh = Self.isFreshLiveGPSSample(processingAge: processingAge,
+                                                       enabled: AppInfo.isAccelTimerX)
         // motion.timestamp → Date 変換オフセットをGPS更新ごとに更新（100Hzでの毎回計算を回避）
         motionToWallOffset = Date().timeIntervalSinceReferenceDate - ProcessInfo.processInfo.systemUptime
         let hAcc = horizontalAccuracyM
@@ -1098,7 +1105,8 @@ final class TimerEngine {
             // コーナリング・路面段差の横加速度が accelSign の符号で Kalman に積分され、
             // GPS 補正前に閾値を偽到達するケースがある。直近 GPS 速度との乖離で弾く。
             if source != "GPS" {
-                guard Self.canUseMotionSplit(currentTime: currTime, lastGPSTime: lastGPSTime) else { continue }
+                guard Self.canUseMotionSplit(currentTime: currTime, lastGPSTime: lastGPSTime,
+                                             enabled: AppInfo.isAccelTimerX) else { continue }
                 if i == 3 {
                     // SPLIT_100 の二段階ガード（偽 FINISH 防止のため最も厳格）
                     // ① peakSpeedKmh >= 85: GPS 精度不良で Kalman が発散した偽検出を防ぐ
@@ -1143,7 +1151,8 @@ final class TimerEngine {
             guard mphSplits[i] == nil, prevSpeed < threshold, currSpeed >= threshold else { continue }
             // Kalman 偽検出ガード（km/h スプリットの 40/60/80 と同等）
             if source != "GPS" {
-                guard Self.canUseMotionSplit(currentTime: currTime, lastGPSTime: lastGPSTime) else { continue }
+                guard Self.canUseMotionSplit(currentTime: currTime, lastGPSTime: lastGPSTime,
+                                             enabled: AppInfo.isAccelTimerX) else { continue }
                 if lastGPSSpeedMs < threshold - 8.0 / 3.6 { continue }
             }
             let crossTime = Self.interpolatedCrossTime(
