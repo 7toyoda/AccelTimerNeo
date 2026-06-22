@@ -78,6 +78,21 @@ final class TimerEngineSplitTests: XCTestCase {
         XCTAssertFalse(TimerEngine.isFakeDopplerSpeed(speedKmh: 80.0, positionSpeedKmh: 45.0))
     }
 
+    /// CoreMotionだけでスプリットを先行検出できるのは、直近GPS補正が新鮮な間だけ。
+    /// GPSが数秒途切れた状態で加速度積分だけが進むと偽スプリット/偽FINISHの原因になる。
+    func testMotionSplitRequiresFreshGPSAnchor() {
+        let lastGPS = base
+        XCTAssertTrue(TimerEngine.canUseMotionSplit(
+            currentTime: lastGPS.addingTimeInterval(1.0),
+            lastGPSTime: lastGPS))
+        XCTAssertFalse(TimerEngine.canUseMotionSplit(
+            currentTime: lastGPS.addingTimeInterval(2.0),
+            lastGPSTime: lastGPS))
+        XCTAssertFalse(TimerEngine.canUseMotionSplit(
+            currentTime: base,
+            lastGPSTime: .distantPast))
+    }
+
     /// 微速クリープの誤開始を避けるため、GPS発進トリガーは速度精度にかかわらず13km/h。
     /// 実際のt=0はCoreMotionのlookBackで補正するため、開始時刻精度はここで落とさない。
     func testLaunchThresholdIsThirteenKmh() {
@@ -132,5 +147,13 @@ final class TimerEngineSplitTests: XCTestCase {
             currentTime: detected.addingTimeInterval(6),
             peakSpeedKmh: 30
         ))
+    }
+
+    /// READY/発進判定に使えるGPSは、処理時刻から大きく遅れていないfixだけ。
+    func testLiveGPSFreshnessRejectsDelayedBatchSamples() {
+        XCTAssertTrue(TimerEngine.isFreshLiveGPSSample(processingAge: 0.2))
+        XCTAssertTrue(TimerEngine.isFreshLiveGPSSample(processingAge: 2.0))
+        XCTAssertFalse(TimerEngine.isFreshLiveGPSSample(processingAge: 2.5))
+        XCTAssertFalse(TimerEngine.isFreshLiveGPSSample(processingAge: -0.1))
     }
 }

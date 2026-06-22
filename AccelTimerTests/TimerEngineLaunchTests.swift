@@ -5,6 +5,7 @@ import XCTest
 /// `shouldConfirmStopped` / `shouldAbortFalseLaunch` / `updateArmedLaunch` は
 /// センサー状態に依存しないため、実機・シミュレーターのセンサー無しで決定的にテストできる。
 /// v0.1.66 検証走行ログで判明した2バグ（赤sAcc停車の取りこぼし／クリープ破棄遅延）の回帰防止。
+@MainActor
 final class TimerEngineLaunchTests: XCTestCase {
 
     private let base = Date(timeIntervalSinceReferenceDate: 2_000)
@@ -134,6 +135,29 @@ final class TimerEngineLaunchTests: XCTestCase {
         XCTAssertTrue(r.shouldTrigger)
     }
 
+    /// 古いGPS fix（バッチ遅延）は、走行中に過去の停車サンプルでREADY化する原因になるため、
+    /// ARMEDラッチを変更せず、発進トリガーにも使わない。
+    func testUpdateArmedLaunch_staleGPSDoesNotConfirmOrTrigger() {
+        var s = TimerEngine.ArmedLaunch(confirmedStopped: false, readySince: nil, poorGPSGraceSince: nil)
+
+        let stopped = TimerEngine.updateArmedLaunch(
+            &s, speedMs: 0.0, speedKmh: 0.0, speedAccuracyMs: 0.3,
+            positionSpeedKmh: 0.0, positionSpeedValid: true,
+            dopplerLooksFake: false, gpsSampleFresh: false, timestamp: base)
+        XCTAssertFalse(s.confirmedStopped)
+        XCTAssertFalse(stopped.didConfirmStop)
+        XCTAssertFalse(stopped.shouldTrigger)
+
+        s = TimerEngine.ArmedLaunch(confirmedStopped: true,
+                                    readySince: base, poorGPSGraceSince: nil)
+        let launch = TimerEngine.updateArmedLaunch(
+            &s, speedMs: 40.0 / 3.6, speedKmh: 40.0, speedAccuracyMs: 0.3,
+            positionSpeedKmh: 40.0, positionSpeedValid: true,
+            dopplerLooksFake: false, gpsSampleFresh: false,
+            timestamp: base.addingTimeInterval(1.0))
+        XCTAssertFalse(launch.shouldTrigger)
+    }
+
     /// 停車確認済みの赤GPS発進は猶予(5s)を超えるとラッチ解除（長い赤移動後のロールング発進を防ぐ）。
     func testUpdateArmedLaunch_poorGPSGraceExpires() {
         var s = TimerEngine.ArmedLaunch(confirmedStopped: true,
@@ -218,5 +242,14 @@ final class TimerEngineLaunchTests: XCTestCase {
             TimerEngine.armedPhase(confirmedStopped: false, rawGpsSpeedKmh: 1.5,
                                    gpsSpeedAccuracyMs: 0.5, inPoorGPSLaunchGrace: false),
             .confirmingStop)
+    }
+
+    /// 古いGPS fixでは現在の画面状態を決めず、次の新鮮なfixまでGPS確認中に倒す。
+    func testArmedPhase_staleGPS_isAcquiring() {
+        XCTAssertEqual(
+            TimerEngine.armedPhase(confirmedStopped: true, rawGpsSpeedKmh: 0.0,
+                                   gpsSpeedAccuracyMs: 0.3, gpsSampleFresh: false,
+                                   inPoorGPSLaunchGrace: false),
+            .acquiringGPS)
     }
 }

@@ -61,6 +61,10 @@ final class TimerEngine {
     // GPS fusion state
     private var lastGPSSpeedMs: Double = 0
     private var lastGPSTime: Date      = .distantPast
+    // CLLocation.timestamp が処理時刻より大きく遅れている場合、そのサンプルはライブ状態遷移
+    // （READY/発進トリガー）には使わない。iOS がGPSを数秒以上バッチ配信する実走ログがあり、
+    // 古い「停止」fixで走行中にREADY化するのを防ぐ。
+    private var lastGPSProcessingAge: TimeInterval = .infinity
 
     // 位置ベース速度の検算用アンカー（GPS Doppler の偽高速＝停車中なのに高速度 を検知する）。
     // 約1秒ごとに座標を採り、移動距離から実速度を概算。Doppler が高いのに位置が動いていなければ誤り。
@@ -140,9 +144,14 @@ final class TimerEngine {
     private static let launchDisplayCapKmh   = 30.0  // 暴走防止の上限（トリガーは13km/h前後で発火しRUNNINGへ移行）
     // GPS発進トリガーは13km/h以上。t=0はlookBackで戻すため、低速クリープの誤開始を
     // 減らしながら発進時刻精度は維持する。
-    private static let launchTriggerKmh = 13.0
-    private static let readyHoldSec = 0.5
-    private static let poorGPSLaunchGraceSec = 5.0
+    nonisolated private static let launchTriggerKmh = 13.0
+    nonisolated private static let readyHoldSec = 0.5
+    nonisolated private static let poorGPSLaunchGraceSec = 5.0
+    // ライブ状態遷移に使えるGPS fixの最大遅延。これを超えるサンプルはログ・軌跡・履歴補間には
+    // 使えるが、「今READY」「今発進」とはみなさない。
+    nonisolated private static let maxLiveGPSSampleAgeSec: TimeInterval = 2.0
+    // CoreMotionだけでスプリットを先行検出してよいGPS鮮度。これを超えたらGPS再補正を待つ。
+    nonisolated private static let maxMotionSplitGPSAgeSec: TimeInterval = 1.6
     // RUNNING 中にピーク速度からこの値(km/h)以上減速したら加速中断とみなし計測を破棄する。
     // 信号待ち・渋滞・巡航を挟んで 100 km/h に達する「水増し」計測を防止する。
     private static let decelAbortDropKmh   = 15.0
@@ -213,11 +222,11 @@ final class TimerEngine {
     /// 下限 1.0 m/s(=3.6km/h)：駐車中でも GPS Doppler は ~1.5-2.7km/h の揺らぎを出すため、
     ///   精度が良い(sAcc小)ときに しきい値が小さくなりすぎて永遠に停車確認できない問題を防ぐ。
     /// 上限 1.4 m/s(=5km/h)：精度不良(sAcc大)時の誤停車判定を防ぐ。発進トリガー(>5km/h)より下。
-    static let stoppedSpeedFloorMs = 1.0
-    static let stoppedSpeedCapMs = 1.4
+    nonisolated static let stoppedSpeedFloorMs = 1.0
+    nonisolated static let stoppedSpeedCapMs = 1.4
     /// 位置ベース停車経路のしきい値(km/h)。座標が約1秒でこの速度相当より動いていなければ停車とみなす。
     /// 生GPS速度の下限(3.6km/h)と揃え、徐行(>=この値)を停車扱いしない。
-    static let positionStoppedKmh = 3.6
+    nonisolated static let positionStoppedKmh = 3.6
     /// sAcc(m/s) に応じた停車しきい値(m/s)。floor..cap にクランプ。
     nonisolated static func stoppedThresholdMs(speedAccMs: Double) -> Double {
         max(stoppedSpeedFloorMs, min(speedAccMs, stoppedSpeedCapMs))
@@ -296,6 +305,15 @@ final class TimerEngine {
         return speedKmh > 30.0 && positionSpeedKmh < speedKmh * 0.4
     }
 
+    nonisolated static func isFreshLiveGPSSample(processingAge: TimeInterval) -> Bool {
+        processingAge >= 0 && processingAge <= maxLiveGPSSampleAgeSec
+    }
+
+    nonisolated static func canUseMotionSplit(currentTime: Date, lastGPSTime: Date) -> Bool {
+        guard lastGPSTime != .distantPast else { return false }
+        return currentTime.timeIntervalSince(lastGPSTime) <= maxMotionSplitGPSAgeSec
+    }
+
     // MARK: - ARMED 発進遷移（集約・テスト対象）
     /// ARMED 中の「停車確認 → READY → 発進トリガー」を司る可変ラッチ群。
     /// 以前は handleGPS 内の複数ブランチに散在し、実走のたびに例外を継ぎ足してバグの温床だった。
@@ -323,9 +341,12 @@ final class TimerEngine {
         positionSpeedKmh: Double,
         positionSpeedValid: Bool,
         dopplerLooksFake: Bool,
+        gpsSampleFresh: Bool = true,
         timestamp: Date
     ) -> ArmedLaunchResult {
         var result = ArmedLaunchResult(shouldTrigger: false, didConfirmStop: false, log: .none)
+
+        guard gpsSampleFresh else { return result }
 
         // ① 停車確認（Doppler精度良好 or 位置が動いていない）
         if shouldConfirmStopped(speedMs: speedMs, speedAccuracyMs: speedAccuracyMs,
@@ -382,9 +403,9 @@ final class TimerEngine {
     enum ArmedPhase { case acquiringGPS, confirmingStop, ready, driving }
 
     /// 停車域とみなす生GPS速度の上限(km/h)。これ未満かつ停車確認済みなら READY。
-    static let armedReadyMaxKmh = 3.0
+    nonisolated static let armedReadyMaxKmh = 3.0
     /// Doppler速度精度が赤(=GPSを速度に使えない)とみなすしきい値(m/s)。
-    static let gpsRedThresholdMs = 2.0
+    nonisolated static let gpsRedThresholdMs = 2.0
 
     /// ARMED 表示フェーズを「エンジンの真の状態」だけから導く唯一の関数（UI と診断ログで共用）。
     /// 旧実装は UI 側で「sAcc赤ゲート → 表示速度しきい値 → confirmedStopped」の3信号を優先順位で
@@ -395,8 +416,12 @@ final class TimerEngine {
         confirmedStopped: Bool,
         rawGpsSpeedKmh: Double,
         gpsSpeedAccuracyMs: Double,
+        gpsSampleFresh: Bool = true,
         inPoorGPSLaunchGrace: Bool
     ) -> ArmedPhase {
+        // 古いfixで現在のUIを決めない。直近に処理されたGPSがバッチ遅延していた場合は
+        // 次の新鮮なfixまでGPS確認中に倒す。
+        if !gpsSampleFresh { return .acquiringGPS }
         // 停車確認済み＋実GPS速度も停車域 → READY（sAccの赤/緑に関わらずエンジンの判断を尊重）
         if confirmedStopped && rawGpsSpeedKmh < armedReadyMaxKmh { return .ready }
         // 停車確認済みのまま赤GPSで動き始めた猶予中＝発進推定中（READYにはしない）
@@ -414,6 +439,7 @@ final class TimerEngine {
         Self.armedPhase(confirmedStopped: confirmedStoppedWhileArmed,
                         rawGpsSpeedKmh: lastGPSSpeedMs * 3.6,
                         gpsSpeedAccuracyMs: gpsSpeedAccuracy,
+                        gpsSampleFresh: Self.isFreshLiveGPSSample(processingAge: lastGPSProcessingAge),
                         inPoorGPSLaunchGrace: poorGPSLaunchGraceSince != nil)
     }
 
@@ -492,6 +518,7 @@ final class TimerEngine {
         // 一時停止中に溜まった可能性のある古いタイミングデータをリセット
         lastGPSSpeedMs = 0
         lastGPSTime    = .distantPast
+        lastGPSProcessingAge = .infinity
         lastMotionTimestamp = 0
         accelSign      = 1.0       // 再開時は「前進」を仮定。3サンプルで実態に追従
         recentGPSDeltas = []       // lastGPSSpeedMs=0 にリセットされるため古い差分を捨てる
@@ -578,6 +605,9 @@ final class TimerEngine {
                            speedAccuracyMs: Double,
                            horizontalAccuracyM: Double,
                            coordinate: CLLocationCoordinate2D) {
+        let processingAge = Date().timeIntervalSince(timestamp)
+        lastGPSProcessingAge = processingAge
+        let gpsSampleFresh = Self.isFreshLiveGPSSample(processingAge: processingAge)
         // motion.timestamp → Date 変換オフセットをGPS更新ごとに更新（100Hzでの毎回計算を回避）
         motionToWallOffset = Date().timeIntervalSinceReferenceDate - ProcessInfo.processInfo.systemUptime
         let hAcc = horizontalAccuracyM
@@ -644,7 +674,7 @@ final class TimerEngine {
                 kalman.update(gpsSpeedMs: speedMs, speedAccuracyMs: speedAccuracyMs)
             }
         } else if state == .armed {
-            if hAcc >= 0, hAcc < 30, !dopplerLooksFake {
+            if gpsSampleFresh, hAcc >= 0, hAcc < 30, !dopplerLooksFake {
                 // 精度良好: GPS速度で Kalman を更新
                 // 停車ノイズ範囲内（speedMs ≤ 精度）ならゼロ方向へ誘導して表示ジッタを抑制
                 if speedMs > max(0.56, speedAccuracyMs) {
@@ -670,7 +700,7 @@ final class TimerEngine {
             // 速度精度が赤(sAcc>=2.0)の時は生GPSがグリッチ(突然112km/h等)を起こすので表示しない。
             // 赤の間はUIが「GPS確認中」表示なので速度0でよい（hAccが良くてもsAccは悪いことがある）。
             // さらに、緑精度でも「位置が動いていないのに高速度」なら Doppler 誤りとして0にする。
-            let armedSpeedAccGood = speedAccuracyMs >= 0 && speedAccuracyMs < 2.0
+            let armedSpeedAccGood = gpsSampleFresh && speedAccuracyMs >= 0 && speedAccuracyMs < 2.0
             fusedSpeedKmh = (armedSpeedAccGood && speedKmh > 2.0 && !dopplerLooksFake) ? speedKmh : 0.0
 
             // 【表示専用】発進表示推定(armedLaunchKmh)をGPS真値へリアンカー。GPSが発進を捉えるまでは
@@ -691,7 +721,8 @@ final class TimerEngine {
                 &launch,
                 speedMs: speedMs, speedKmh: speedKmh, speedAccuracyMs: speedAccuracyMs,
                 positionSpeedKmh: positionSpeedKmh, positionSpeedValid: positionSpeedValid,
-                dopplerLooksFake: dopplerLooksFake, timestamp: timestamp)
+                dopplerLooksFake: dopplerLooksFake, gpsSampleFresh: gpsSampleFresh,
+                timestamp: timestamp)
             confirmedStoppedWhileArmed = launch.confirmedStopped
             readySince = launch.readySince
             poorGPSLaunchGraceSince = launch.poorGPSGraceSince
@@ -704,6 +735,9 @@ final class TimerEngine {
             case .poorGPSGrace:   gpsLogEvent = "GPS_POOR_LAUNCH_GRACE"
             case .poorGPSExpired: gpsLogEvent = "GPS_POOR_LAUNCH_EXPIRED"
             case .none:           break
+            }
+            if !gpsSampleFresh {
+                gpsLogEvent = gpsLogEvent.isEmpty ? "GPS_STALE_IGNORED" : "\(gpsLogEvent)+GPS_STALE_IGNORED"
             }
             if launchResult.shouldTrigger {
                 let launchThresholdMs = Self.launchThresholdMs(speedAccuracyMs: speedAccuracyMs)
@@ -1064,6 +1098,7 @@ final class TimerEngine {
             // コーナリング・路面段差の横加速度が accelSign の符号で Kalman に積分され、
             // GPS 補正前に閾値を偽到達するケースがある。直近 GPS 速度との乖離で弾く。
             if source != "GPS" {
+                guard Self.canUseMotionSplit(currentTime: currTime, lastGPSTime: lastGPSTime) else { continue }
                 if i == 3 {
                     // SPLIT_100 の二段階ガード（偽 FINISH 防止のため最も厳格）
                     // ① peakSpeedKmh >= 85: GPS 精度不良で Kalman が発散した偽検出を防ぐ
@@ -1107,7 +1142,10 @@ final class TimerEngine {
         for (i, threshold) in Self.mphSplitThresholdsMs.enumerated() {
             guard mphSplits[i] == nil, prevSpeed < threshold, currSpeed >= threshold else { continue }
             // Kalman 偽検出ガード（km/h スプリットの 40/60/80 と同等）
-            if source != "GPS", lastGPSSpeedMs < threshold - 8.0 / 3.6 { continue }
+            if source != "GPS" {
+                guard Self.canUseMotionSplit(currentTime: currTime, lastGPSTime: lastGPSTime) else { continue }
+                if lastGPSSpeedMs < threshold - 8.0 / 3.6 { continue }
+            }
             let crossTime = Self.interpolatedCrossTime(
                 threshold: threshold, prev: (prevSpeed, prevTime), curr: (currSpeed, currTime))
             guard crossTime >= start else { continue }
@@ -1196,6 +1234,7 @@ final class TimerEngine {
         startTime           = nil
         lastGPSSpeedMs      = 0
         lastGPSTime         = .distantPast
+        lastGPSProcessingAge = .infinity
         posAnchorCoord      = nil
         posAnchorTime       = .distantPast
         positionSpeedKmh    = 0
