@@ -860,7 +860,12 @@ final class TimerEngine {
                       speedMps: speedMs, accMps: speedAccuracyMs, hAccM: hAcc,
                       accelSign: accelSign, kalmanMps: kalman.speedMs,
                       displayKmh: fusedSpeedKmh, event: gpsLogEvent)
+        // リプレイ基盤用：停車確認/偽Doppler判定の入力(位置ベース速度・有効性・偽Dopplerフラグ)を
+        // event 欄へ追記する（CSVヘッダを壊さない）。これで debug.csv だけで ARMED の停車確認〜表示まで
+        // 再走行せずにリプレイできる（ReplayTests）。pos=位置ベース速度km/h, posOK=確定済み, fake=偽Doppler。
         let debugEvent = debugEventWithArmedDisplay(gpsLogEvent)
+            + String(format: " pos=%.2f posOK=%d fake=%d",
+                     positionSpeedKmh, positionSpeedValid ? 1 : 0, dopplerLooksFake ? 1 : 0)
         // 常時ログ（計測の保存有無に関わらず追記。未トリガー時の調査用）
         DebugLogger.shared.logGPS(state: stateName, gpsMps: speedMs, accMps: speedAccuracyMs,
                                   hAccM: hAcc, speedKmh: speedKmh, peakKmh: peakSpeedKmh,

@@ -308,6 +308,11 @@ event）を Downloads の日付フォルダに格納して共有する。v0.1.65
 GPS行は event 欄に `UI=READY` / `UI=DRIVING` / `UI=CONFIRMING_STOP` / `UI=GPS_CHECK`
 を出す（既存CSVヘッダを壊さないため列追加ではなくevent欄へ追記）。Python で解析し、速度
 プロファイル・スプリット・GPS精度・誤発進などを検証してから修正するのが定石。
+**v0.1.76 以降（AccelTimer側）は GPS行の event 欄に `pos=<位置ベース速度km/h> posOK=<0/1> fake=<0/1>` も出す**
+（`positionSpeedKmh` / `positionSpeedValid` / `dopplerLooksFake`）。これで debug.csv だけで停車確認
+(`shouldConfirmStopped`/`updateArmedLaunch`)〜表示(`armedPhase`)まで**近似なしでフル・リプレイ**できる
+（リプレイ基盤 = `AccelTimerTests/ReplayTests.swift`。§11参照。新ログの停車区間を ReplaySample 配列として
+足せば、再走行せず永久回帰テスト化）。AccelTimerX 側に同等のログを足せば X もフル・リプレイ可能。
 
 - **2つのCSVの wall_time は意味が違う（解析時の必須知識）**:
   - `debug.csv` の wall_time ＝ **アプリがそのサンプルを処理した時刻**（`DebugLogger` が `Date()` で記録）。
