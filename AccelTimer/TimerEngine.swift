@@ -692,8 +692,11 @@ final class TimerEngine {
             // 偽発進フェイルセーフ（微速クリープ対策）：GPS発進検知から launchConfirmSec 秒後に
             // ピークが launchConfirmKmh 未満＝信号待ちの微速前進等で誤トリガーした計測。
             // 判定は時間とピーク（蓄積済みの状態）だけに依存し現在サンプルの妥当性に依存しないため、
-            // dopplerLooksFake ガードの「外」で毎サンプル評価する。ガードの内側に置くと、クリープの
-            // 偽Dopplerサンプルで判定がスキップされ破棄が大幅に遅延する（実走で18秒の例を確認）。
+            // dopplerLooksFake ガードの「外」で毎サンプル評価する（防御的配置）。ガードの内側だと、
+            // 停車中にDopplerが偽高速(>30km/h)を出し続ける状況で判定がスキップされ破棄が遅延し得る。
+            // （注: 低速クリープ(<30km/h)は dopplerLooksFake=false なのでこのガードの影響を受けない。
+            //   2026-06-22 01:04ログの「破棄まで18秒」はGPS配信が18秒遅延し適格サンプルが届かなかった
+            //   ためで、本ガードが原因ではない。HANDOFF §14 のGPS配信遅延を参照。）
             if Self.shouldAbortFalseLaunch(launchDetectedAt: launchDetectedAt,
                                            currentTime: timestamp,
                                            peakSpeedKmh: peakSpeedKmh) {
