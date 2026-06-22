@@ -12,11 +12,17 @@ struct SettingsView: View {
     @AppStorage("speedUnit") private var speedUnitRaw: String = SpeedUnit.defaultForLocale.rawValue
     @Environment(StoreManager.self) private var store
     @Environment(\.openURL) private var openURL
+    @Environment(\.scenePhase) private var scenePhase
     @State private var restoring = false
     @State private var showPaywall = false
     @State private var showDisclaimer = false
     @State private var showCameraDeniedAlert = false
     @State private var showMicDeniedAlert = false
+    // 「設定アプリへ誘導 → 戻ってきたら自動でトグルをON」のための意図フラグ。
+    // 権限拒否でトグルを戻した（またはユーザーが設定導線を押した）時に立て、
+    // scenePhase が .active へ戻った時に許可されていればトグルへ反映してクリアする。
+    @State private var pendingEnableVideo = false
+    @State private var pendingEnableAudio = false
     private var selectedUnit: SpeedUnit { SpeedUnit(rawValue: speedUnitRaw) ?? .kmh }
 
 #if DEBUG
@@ -149,9 +155,10 @@ struct SettingsView: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                         if cameraPermissionDenied {
-                            Label("カメラ権限がないため、動画録画は使えません", systemImage: "exclamationmark.triangle.fill")
-                                .font(.caption)
-                                .foregroundStyle(.orange)
+                            permissionFixGuide(
+                                message: "カメラ権限がないため、動画録画は使えません",
+                                steps: "「設定を開く」→ AccelTimer →「カメラ」をオンにしてください",
+                                onOpen: { pendingEnableVideo = true; openAppSettings() })
                         }
                         if videoEnabled {
                             Toggle("走行音を録音", isOn: $audioEnabled)
@@ -159,9 +166,10 @@ struct SettingsView: View {
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                             if microphonePermissionDenied {
-                                Label("マイク権限がないため、音声録音は使えません", systemImage: "exclamationmark.triangle.fill")
-                                    .font(.caption)
-                                    .foregroundStyle(.orange)
+                                permissionFixGuide(
+                                    message: "マイク権限がないため、音声録音は使えません",
+                                    steps: "「設定を開く」→ AccelTimer →「マイク」をオンにしてください",
+                                    onOpen: { pendingEnableAudio = true; openAppSettings() })
                             }
                         }
                     }
@@ -224,6 +232,22 @@ struct SettingsView: View {
         .onAppear {
             reconcileVideoPermissionToggles()
         }
+        // 設定アプリで権限を変更して戻ってきた時の再チェック。
+        // 許可されていて「ONにしたかった」意図が残っていればトグルを自動で反映する
+        // （初回と同じく、設定画面に行かずに済んだ体験に近づける）。逆に権限を切られていたら戻す。
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .active else { return }
+            if pendingEnableVideo && !cameraPermissionDenied {
+                videoEnabled = true   // onChange(videoEnabled) が走り、必要ならマイクも確認される
+            }
+            if pendingEnableAudio && videoEnabled && !microphonePermissionDenied {
+                audioEnabled = true
+            }
+            // 許可が下りなかった場合に意図を持ち越さない（次回の手動操作で再判定）
+            pendingEnableVideo = false
+            pendingEnableAudio = false
+            reconcileVideoPermissionToggles()
+        }
         // 動画録画ON時：カメラ許可をその場で確認。拒否ならトグルを戻し案内する
         .onChange(of: videoEnabled) { _, on in
             guard on else { return }
@@ -231,13 +255,14 @@ struct SettingsView: View {
                 let cam = await VideoRecorder.requestAccess(for: .video)
                 if !cam {
                     videoEnabled = false
+                    pendingEnableVideo = true   // 設定から戻ったら自動でONにし直す意図を記録
                     showCameraDeniedAlert = true
                     return
                 }
                 // 走行音もON（既定）なら続けてマイク許可を確認
                 if audioEnabled {
                     let mic = await VideoRecorder.requestAccess(for: .audio)
-                    if !mic { audioEnabled = false; showMicDeniedAlert = true }
+                    if !mic { audioEnabled = false; pendingEnableAudio = true; showMicDeniedAlert = true }
                 }
             }
         }
@@ -246,21 +271,42 @@ struct SettingsView: View {
             guard on, videoEnabled else { return }
             Task {
                 let mic = await VideoRecorder.requestAccess(for: .audio)
-                if !mic { audioEnabled = false; showMicDeniedAlert = true }
+                if !mic { audioEnabled = false; pendingEnableAudio = true; showMicDeniedAlert = true }
             }
         }
         .alert("カメラへのアクセスが必要です", isPresented: $showCameraDeniedAlert) {
-            Button("設定を開く") { if let u = URL(string: UIApplication.openSettingsURLString) { openURL(u) } }
+            Button("設定を開く") { pendingEnableVideo = true; openAppSettings() }
             Button("OK", role: .cancel) {}
         } message: {
-            Text("動画録画にはカメラの許可が必要です。設定アプリの AccelTimer でカメラをオンにしてください。")
+            Text("動画録画にはカメラの許可が必要です。「設定を開く」→ AccelTimer →「カメラ」をオンにすると、戻った時に自動でオンになります。")
         }
         .alert("マイクへのアクセスが必要です", isPresented: $showMicDeniedAlert) {
-            Button("設定を開く") { if let u = URL(string: UIApplication.openSettingsURLString) { openURL(u) } }
+            Button("設定を開く") { pendingEnableAudio = true; openAppSettings() }
             Button("OK", role: .cancel) {}
         } message: {
-            Text("走行音の録音にはマイクの許可が必要です。設定アプリの AccelTimer でマイクをオンにしてください。音声なしでの動画録画は可能です。")
+            Text("走行音の録音にはマイクの許可が必要です。「設定を開く」→ AccelTimer →「マイク」をオンにすると、戻った時に自動でオンになります。音声なしでの動画録画は可能です。")
         }
+    }
+
+    /// 権限拒否時のインライン案内（警告ラベル＋具体的な手順＋その場で設定アプリへ飛ぶボタン）。
+    @ViewBuilder
+    private func permissionFixGuide(message: LocalizedStringKey,
+                                    steps: LocalizedStringKey,
+                                    onOpen: @escaping () -> Void) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Label(message, systemImage: "exclamationmark.triangle.fill")
+                .font(.caption)
+                .foregroundStyle(.orange)
+            Text(steps)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Button("設定を開く", action: onOpen)
+                .font(.caption.weight(.semibold))
+        }
+    }
+
+    private func openAppSettings() {
+        if let u = URL(string: UIApplication.openSettingsURLString) { openURL(u) }
     }
 
     private var cameraPermissionDenied: Bool {
