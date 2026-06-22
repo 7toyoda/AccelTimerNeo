@@ -377,6 +377,46 @@ final class TimerEngine {
         return result
     }
 
+    // MARK: - ARMED 表示フェーズ（UI と診断ログの単一の真実）
+    /// ARMED 中に画面へ出す状態。GPS確認中 / 停止確認中 / READY / 走行中。
+    enum ArmedPhase { case acquiringGPS, confirmingStop, ready, driving }
+
+    /// 停車域とみなす生GPS速度の上限(km/h)。これ未満かつ停車確認済みなら READY。
+    static let armedReadyMaxKmh = 3.0
+    /// Doppler速度精度が赤(=GPSを速度に使えない)とみなすしきい値(m/s)。
+    static let gpsRedThresholdMs = 2.0
+
+    /// ARMED 表示フェーズを「エンジンの真の状態」だけから導く唯一の関数（UI と診断ログで共用）。
+    /// 旧実装は UI 側で「sAcc赤ゲート → 表示速度しきい値 → confirmedStopped」の3信号を優先順位で
+    /// 競合させており、エンジンが positionSpeed で停車確認済み(v0.1.67)でも sAcc が赤だと「GPS確認中」を
+    /// 出して READY を隠す不整合があった（2026-06-22 12:36 ログ）。さらに表示速度(fusedSpeedKmh)は
+    /// 赤時に強制0・発進推定で膨張するため判定基準に不適。ここでは confirmedStopped と「生GPS速度」を基準にする。
+    nonisolated static func armedPhase(
+        confirmedStopped: Bool,
+        rawGpsSpeedKmh: Double,
+        gpsSpeedAccuracyMs: Double,
+        inPoorGPSLaunchGrace: Bool
+    ) -> ArmedPhase {
+        // 停車確認済み＋実GPS速度も停車域 → READY（sAccの赤/緑に関わらずエンジンの判断を尊重）
+        if confirmedStopped && rawGpsSpeedKmh < armedReadyMaxKmh { return .ready }
+        // 停車確認済みのまま赤GPSで動き始めた猶予中＝発進推定中（READYにはしない）
+        if confirmedStopped && inPoorGPSLaunchGrace { return .driving }
+        // GPSが使えない（fixなし or 速度精度が赤）＝速度を信用できない → GPS確認中
+        if gpsSpeedAccuracyMs < 0 || gpsSpeedAccuracyMs >= gpsRedThresholdMs { return .acquiringGPS }
+        // 明確に動いている
+        if rawGpsSpeedKmh >= armedReadyMaxKmh { return .driving }
+        // 低速・減速中で停車未確認
+        return .confirmingStop
+    }
+
+    /// 現在の ARMED 表示フェーズ（UI・診断ログから参照）。
+    var armedPhase: ArmedPhase {
+        Self.armedPhase(confirmedStopped: confirmedStoppedWhileArmed,
+                        rawGpsSpeedKmh: lastGPSSpeedMs * 3.6,
+                        gpsSpeedAccuracyMs: gpsSpeedAccuracy,
+                        inPoorGPSLaunchGrace: poorGPSLaunchGraceSince != nil)
+    }
+
     init() {
         location.onSpeedUpdate = { [weak self] speedMs, timestamp, speedAccuracy, horizontalAccuracy, coordinate in
             self?.handleGPS(speedMs: speedMs,
@@ -801,14 +841,11 @@ final class TimerEngine {
     private func debugEventWithArmedDisplay(_ event: String) -> String {
         guard state == .armed else { return event }
         let display: String
-        if gpsSpeedAccuracy < 0 || gpsSpeedAccuracy >= 2.0 {
-            display = "GPS_CHECK"
-        } else if confirmedStoppedWhileArmed && fusedSpeedKmh < 2.0 {
-            display = "READY"
-        } else if fusedSpeedKmh >= 3.0 {
-            display = "DRIVING"
-        } else {
-            display = "CONFIRMING_STOP"
+        switch armedPhase {
+        case .acquiringGPS:   display = "GPS_CHECK"
+        case .ready:          display = "READY"
+        case .driving:        display = "DRIVING"
+        case .confirmingStop: display = "CONFIRMING_STOP"
         }
         return event.isEmpty ? "UI=\(display)" : "\(event) UI=\(display)"
     }

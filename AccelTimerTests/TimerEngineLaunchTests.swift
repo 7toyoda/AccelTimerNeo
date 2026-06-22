@@ -152,4 +152,71 @@ final class TimerEngineLaunchTests: XCTestCase {
         XCTAssertFalse(s.confirmedStopped)            // 猶予超過で解除
         XCTAssertEqual(r2.log, .poorGPSExpired)
     }
+
+    // MARK: - armedPhase（ARMED表示の単一の真実）
+
+    /// バグ核心（2026-06-22 12:36ログ）: 停車確認済み＋sAcc赤(2.7)でも、生GPS速度≈0なら READY。
+    /// 旧実装は赤ゲートを優先して「GPS確認中」を出しREADYを隠していた。
+    func testArmedPhase_confirmedStopWithRedGPS_isReady() {
+        XCTAssertEqual(
+            TimerEngine.armedPhase(confirmedStopped: true, rawGpsSpeedKmh: 0.2,
+                                   gpsSpeedAccuracyMs: 2.7, inPoorGPSLaunchGrace: false),
+            .ready)
+    }
+
+    /// 停車確認済みでもクリープ中（生GPS 9km/h）なら READY にしない＝走行中。
+    func testArmedPhase_confirmedButCreeping_isDriving() {
+        XCTAssertEqual(
+            TimerEngine.armedPhase(confirmedStopped: true, rawGpsSpeedKmh: 9.0,
+                                   gpsSpeedAccuracyMs: 0.7, inPoorGPSLaunchGrace: false),
+            .driving)
+    }
+
+    /// 停車確認済みのまま赤GPSで動き始めた猶予中（生GPS 20km/h）＝発進推定中＝走行中（READYにしない）。
+    func testArmedPhase_poorGPSGraceMoving_isDriving() {
+        XCTAssertEqual(
+            TimerEngine.armedPhase(confirmedStopped: true, rawGpsSpeedKmh: 20.0,
+                                   gpsSpeedAccuracyMs: 2.7, inPoorGPSLaunchGrace: true),
+            .driving)
+    }
+
+    /// 完全停車・GPS緑 → READY。
+    func testArmedPhase_parkedGreen_isReady() {
+        XCTAssertEqual(
+            TimerEngine.armedPhase(confirmedStopped: true, rawGpsSpeedKmh: 0.0,
+                                   gpsSpeedAccuracyMs: 0.3, inPoorGPSLaunchGrace: false),
+            .ready)
+    }
+
+    /// GPS未取得(sAcc<0) → GPS確認中。
+    func testArmedPhase_noGPS_isAcquiring() {
+        XCTAssertEqual(
+            TimerEngine.armedPhase(confirmedStopped: false, rawGpsSpeedKmh: 0.0,
+                                   gpsSpeedAccuracyMs: -1, inPoorGPSLaunchGrace: false),
+            .acquiringGPS)
+    }
+
+    /// 赤sAcc・未停車 → GPS確認中（速度を信用できない）。
+    func testArmedPhase_redNotConfirmed_isAcquiring() {
+        XCTAssertEqual(
+            TimerEngine.armedPhase(confirmedStopped: false, rawGpsSpeedKmh: 10.0,
+                                   gpsSpeedAccuracyMs: 3.0, inPoorGPSLaunchGrace: false),
+            .acquiringGPS)
+    }
+
+    /// 緑・未停車・走行 → 走行中。
+    func testArmedPhase_greenDriving_isDriving() {
+        XCTAssertEqual(
+            TimerEngine.armedPhase(confirmedStopped: false, rawGpsSpeedKmh: 30.0,
+                                   gpsSpeedAccuracyMs: 0.3, inPoorGPSLaunchGrace: false),
+            .driving)
+    }
+
+    /// 緑・未停車・低速で減速中 → 停止確認中。
+    func testArmedPhase_greenSlowing_isConfirmingStop() {
+        XCTAssertEqual(
+            TimerEngine.armedPhase(confirmedStopped: false, rawGpsSpeedKmh: 1.5,
+                                   gpsSpeedAccuracyMs: 0.5, inPoorGPSLaunchGrace: false),
+            .confirmingStop)
+    }
 }

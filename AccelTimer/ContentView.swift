@@ -562,7 +562,8 @@ struct MeasureView: View {
     // 速度表示文字列。GPS確認中(赤)で待機中は「速度不明」を表す "-.-"（0.0=停車中と区別）。
     // 画面表示は ~10Hz に間引いた displaySpeedKmh を使う（fusedSpeedKmh=100Hzは動画オーバーレイ用）。
     private var speedText: String {
-        if gpsIsRed && (engine.state == .idle || engine.state == .armed) {
+        // GPSが使えず速度を信用できない時だけ "-.-"。停車確認済み(READY)なら 0.0 を出す。
+        if engine.armedPhase == .acquiringGPS && (engine.state == .idle || engine.state == .armed) {
             return "-.-"
         }
         return String(format: "%.1f", unit.value(fromKmh: engine.displaySpeedKmh))
@@ -685,25 +686,26 @@ struct MeasureView: View {
         switch engine.state {
         case .idle, .armed:
             VStack(spacing: 8) {
-                if gpsIsRed {
+                // 表示は engine.armedPhase（エンジンの真の状態から導く単一の真実）にのみ依存。
+                // sAcc赤でも停車確認済みなら READY を出す（旧実装のGPS確認中優先の不整合を解消）。
+                switch engine.armedPhase {
+                case .acquiringGPS:
                     Text("GPS確認中")
                         .font(.system(size: 48, weight: .black, design: .rounded))
                         .foregroundStyle(.orange)
                         .opacity(gpsPulse ? 1.0 : 0.5)
-                } else if armedDisplay == .ready {
-                    // 実際に停車（速度≈0）＋停車確認済みのときだけ READY。走行中はラッチが
-                    // 残っていても READY にしない（端末固定はサブ文言で促す）。
+                case .ready:
                     Text("READY")
                         .font(.system(size: 48, weight: .black, design: .rounded))
                         .foregroundStyle(.green)
                         .opacity(readyPulse ? 1.0 : 0.55)
                         .scaleEffect(readyPulse ? 1.04 : 1.0)
-                } else if armedDisplay == .driving {
+                case .driving:
                     // 走行中：急かさない控えめ表示（流し運転中の停止催促を防ぐ）
                     Text("走行中")
                         .font(.system(size: 34, weight: .bold, design: .rounded))
                         .foregroundStyle(.secondary)
-                } else {
+                case .confirmingStop:
                     // 低速・未停車または停車確認待ち。命令口調の大表示にしない。
                     Text("停止確認中")
                         .font(.system(size: 36, weight: .black, design: .rounded))
@@ -1023,20 +1025,9 @@ struct MeasureView: View {
         return spd < 0 || spd >= 2.0
     }
 
-    // ARMED 表示の3状態。READY=実停車、driving=走行中（急かさない）、stopPlease=停車確認待ち。
-    private enum ArmedDisplay { case ready, driving, stopPlease }
-    private var armedDisplay: ArmedDisplay {
-        let v = engine.displaySpeedKmh
-        // 実停車に近い速度だけ READY。5km/h前後のクリープではREADYを出さない。
-        if engine.confirmedStoppedWhileArmed && v < 2.0 { return .ready }
-        // 3km/h以上で動いているなら、停止を急かさず走行中として扱う。
-        if v >= 3.0 { return .driving }
-        return .stopPlease
-    }
-
-    // ARMED 状態のサブテキスト。
+    // ARMED 状態のサブテキスト。表示フェーズ（engine.armedPhase）に追従。
     private var armedSubtitle: String {
-        switch armedDisplay {
+        switch engine.armedPhase {
         case .ready:
             if !engine.deviceSteadyWhileArmed {
                 return String(localized: "端末を車体に固定すると高精度で計測できます")
@@ -1044,8 +1035,10 @@ struct MeasureView: View {
             return String(localized: "発進を検知して自動スタート（10 km/h前後）")
         case .driving:
             return String(localized: "停車すると計測できます")
-        case .stopPlease:
+        case .confirmingStop:
             return String(localized: "停止を確認しています")
+        case .acquiringGPS:
+            return String(localized: "GPSの取得を待っています")
         }
     }
 
