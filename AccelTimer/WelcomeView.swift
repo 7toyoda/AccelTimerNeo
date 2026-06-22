@@ -39,7 +39,7 @@ struct WelcomeView: View {
                         .shadow(color: .cyan.opacity(0.8), radius: glow ? 26 : 12)
                 }
 
-                Text("AccelTimer")
+                Text(AppInfo.displayName)
                     .font(.system(size: 40, weight: .heavy, design: .rounded))
                     .foregroundStyle(.white)
                     .padding(.top, 18)

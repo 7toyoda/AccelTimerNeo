@@ -5,7 +5,10 @@ import Security
 /// Keychain はアプリを削除しても残るため、再インストールによる無料枠リセットを防げる
 /// （UserDefaults はアプリ削除で消えるのでトライアル管理には使えない）。
 enum TrialKeychain {
-    private static let service = "com.acceltimer.app.AccelTimer.trial"
+    private static var service: String {
+        let bundleID = Bundle.main.bundleIdentifier ?? "com.acceltimer.app.AccelTimer"
+        return "\(bundleID).trial"
+    }
     private static let countAccount = "free_measurement_count"
     private static let dayAccount = "last_free_day"
 

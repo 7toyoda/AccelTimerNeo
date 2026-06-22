@@ -157,7 +157,7 @@ struct SettingsView: View {
                         if cameraPermissionDenied {
                             permissionFixGuide(
                                 message: "カメラ権限がないため、動画録画は使えません",
-                                steps: "「設定を開く」→ AccelTimer →「カメラ」をオンにしてください",
+                                steps: "「設定を開く」→ \(AppInfo.displayName) →「カメラ」をオンにしてください",
                                 onOpen: { pendingEnableVideo = true; openAppSettings() })
                         }
                         if videoEnabled {
@@ -168,7 +168,7 @@ struct SettingsView: View {
                             if microphonePermissionDenied {
                                 permissionFixGuide(
                                     message: "マイク権限がないため、音声録音は使えません",
-                                    steps: "「設定を開く」→ AccelTimer →「マイク」をオンにしてください",
+                                    steps: "「設定を開く」→ \(AppInfo.displayName) →「マイク」をオンにしてください",
                                     onOpen: { pendingEnableAudio = true; openAppSettings() })
                             }
                         }
@@ -278,20 +278,20 @@ struct SettingsView: View {
             Button("設定を開く") { pendingEnableVideo = true; openAppSettings() }
             Button("OK", role: .cancel) {}
         } message: {
-            Text("動画録画にはカメラの許可が必要です。「設定を開く」→ AccelTimer →「カメラ」をオンにすると、戻った時に自動でオンになります。")
+            Text("動画録画にはカメラの許可が必要です。「設定を開く」→ \(AppInfo.displayName) →「カメラ」をオンにすると、戻った時に自動でオンになります。")
         }
         .alert("マイクへのアクセスが必要です", isPresented: $showMicDeniedAlert) {
             Button("設定を開く") { pendingEnableAudio = true; openAppSettings() }
             Button("OK", role: .cancel) {}
         } message: {
-            Text("走行音の録音にはマイクの許可が必要です。「設定を開く」→ AccelTimer →「マイク」をオンにすると、戻った時に自動でオンになります。音声なしでの動画録画は可能です。")
+            Text("走行音の録音にはマイクの許可が必要です。「設定を開く」→ \(AppInfo.displayName) →「マイク」をオンにすると、戻った時に自動でオンになります。音声なしでの動画録画は可能です。")
         }
     }
 
     /// 権限拒否時のインライン案内（警告ラベル＋具体的な手順＋その場で設定アプリへ飛ぶボタン）。
     @ViewBuilder
     private func permissionFixGuide(message: LocalizedStringKey,
-                                    steps: LocalizedStringKey,
+                                    steps: String,
                                     onOpen: @escaping () -> Void) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Label(message, systemImage: "exclamationmark.triangle.fill")
