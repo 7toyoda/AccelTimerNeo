@@ -690,7 +690,7 @@ struct MeasureView: View {
                 // sAcc赤でも停車確認済みなら READY を出す（旧実装のGPS確認中優先の不整合を解消）。
                 switch engine.armedPhase {
                 case .acquiringGPS:
-                    Text("GPS確認中")
+                    Text("GPS取得中")
                         .font(.system(size: 48, weight: .black, design: .rounded))
                         .foregroundStyle(.orange)
                         .opacity(gpsPulse ? 1.0 : 0.5)
@@ -700,15 +700,12 @@ struct MeasureView: View {
                         .foregroundStyle(.green)
                         .opacity(readyPulse ? 1.0 : 0.55)
                         .scaleEffect(readyPulse ? 1.04 : 1.0)
-                case .driving:
-                    // 走行中：急かさない控えめ表示（流し運転中の停止催促を防ぐ）
-                    Text("走行中")
-                        .font(.system(size: 34, weight: .bold, design: .rounded))
-                        .foregroundStyle(.secondary)
-                case .confirmingStop:
-                    // 低速・未停車または停車確認待ち。命令口調の大表示にしない。
-                    Text("停止確認中")
-                        .font(.system(size: 36, weight: .black, design: .rounded))
+                case .driving, .confirmingStop:
+                    // 計測は必ず0km/hから始まるため、まだ止まっていない＝計測できない。
+                    // 「走行中」という状態語は出さず、止まれば計測できることだけを正直に伝える。
+                    // この状態は「走行中に起動」「破棄後に転がっている」等の稀な場面のみ出る。
+                    Text("停止してください")
+                        .font(.system(size: 32, weight: .black, design: .rounded))
                         .foregroundStyle(.orange)
                         .opacity(gpsPulse ? 1.0 : 0.5)
                 }
@@ -1033,10 +1030,8 @@ struct MeasureView: View {
                 return String(localized: "端末を車体に固定すると高精度で計測できます")
             }
             return String(localized: "発進を検知して自動スタート（10 km/h前後）")
-        case .driving:
-            return String(localized: "停車すると計測できます")
-        case .confirmingStop:
-            return String(localized: "停止を確認しています")
+        case .driving, .confirmingStop:
+            return String(localized: "一度停止すると計測を開始できます")
         case .acquiringGPS:
             return String(localized: "GPSの取得を待っています")
         }
