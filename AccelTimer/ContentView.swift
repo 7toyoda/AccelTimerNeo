@@ -686,38 +686,11 @@ struct MeasureView: View {
         switch engine.state {
         case .idle, .armed:
             VStack(spacing: 8) {
-                // 表示は engine.armedPhase（エンジンの真の状態から導く単一の真実）にのみ依存。
-                // sAcc赤でも停車確認済みなら READY を出す（旧実装のGPS確認中優先の不整合を解消）。
-                switch engine.armedPhase {
-                case .acquiringGPS:
-                    Text("GPS取得中")
-                        .font(.system(size: 48, weight: .black, design: .rounded))
-                        .foregroundStyle(.orange)
-                        .opacity(gpsPulse ? 1.0 : 0.5)
-                case .ready:
-                    // 端末が揺れている時は緑「READY」を出さない（発進点の精度が落ちるため）。
-                    // 計測トリガー自体はゲートしないので、固定せず発進しても計測はされ手持ちフラグが付く。
-                    if engine.deviceSteadyWhileArmed {
-                        Text("READY")
-                            .font(.system(size: 48, weight: .black, design: .rounded))
-                            .foregroundStyle(.green)
-                            .opacity(readyPulse ? 1.0 : 0.55)
-                            .scaleEffect(readyPulse ? 1.04 : 1.0)
-                    } else {
-                        Text("端末を固定")
-                            .font(.system(size: 34, weight: .black, design: .rounded))
-                            .foregroundStyle(.orange)
-                            .opacity(gpsPulse ? 1.0 : 0.5)
-                    }
-                case .driving, .confirmingStop:
-                    // 計測は必ず0km/hから始まるため、まだ止まっていない＝計測できない。
-                    // 「走行中」という状態語は出さず、止まれば計測できることだけを正直に伝える。
-                    // この状態は「走行中に起動」「破棄後に転がっている」等の稀な場面のみ出る。
-                    Text("停止してください")
-                        .font(.system(size: 32, weight: .black, design: .rounded))
-                        .foregroundStyle(.orange)
-                        .opacity(gpsPulse ? 1.0 : 0.5)
-                }
+                // 大きな文言は engine.armedDisplayLabel（純粋関数 TimerEngine.armedDisplayLabel）に集約。
+                // 文言の決定はテスト可能なロジック側に置き、ここでは色・サイズだけ付ける。
+                // 「停止してください」は計測が必ず0km/hから始まるため未停車では出す稀な表示。
+                // 「端末を固定」は停車していても端末が揺れている時（緑READYは出さない＝精度優先）。
+                armedLabelView(engine.armedDisplayLabel)
                 Text(armedSubtitle)
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -1029,6 +1002,36 @@ struct MeasureView: View {
     private var gpsIsRed: Bool {
         let spd = engine.gpsSpeedAccuracy
         return spd < 0 || spd >= 2.0
+    }
+
+    // ARMED の大きな文言ビュー。文言は engine.armedDisplayLabel（テスト可能な純粋関数）が決め、
+    // ここはラベルごとの色・サイズ・点滅だけを担当する。
+    @ViewBuilder
+    private func armedLabelView(_ label: TimerEngine.ArmedDisplayLabel) -> some View {
+        let key = LocalizedStringKey(label.text)
+        switch label {
+        case .ready:
+            Text(key)
+                .font(.system(size: 48, weight: .black, design: .rounded))
+                .foregroundStyle(.green)
+                .opacity(readyPulse ? 1.0 : 0.55)
+                .scaleEffect(readyPulse ? 1.04 : 1.0)
+        case .acquiringGPS:
+            Text(key)
+                .font(.system(size: 48, weight: .black, design: .rounded))
+                .foregroundStyle(.orange)
+                .opacity(gpsPulse ? 1.0 : 0.5)
+        case .secureDevice:
+            Text(key)
+                .font(.system(size: 34, weight: .black, design: .rounded))
+                .foregroundStyle(.orange)
+                .opacity(gpsPulse ? 1.0 : 0.5)
+        case .stop:
+            Text(key)
+                .font(.system(size: 32, weight: .black, design: .rounded))
+                .foregroundStyle(.orange)
+                .opacity(gpsPulse ? 1.0 : 0.5)
+        }
     }
 
     // ARMED 状態のサブテキスト。表示フェーズ（engine.armedPhase）に追従。

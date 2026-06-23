@@ -453,6 +453,41 @@ final class TimerEngine {
                         inPoorGPSLaunchGrace: poorGPSLaunchGraceSince != nil)
     }
 
+    // MARK: - ARMED 表示ラベル（画面の大きな文言）
+    /// ARMED 中に画面へ大きく出す文言。`text` はソース言語（日本語）＝ローカライズキー。
+    enum ArmedDisplayLabel: Equatable {
+        case acquiringGPS   // GPS取得中
+        case ready          // READY（停車・端末安定）
+        case secureDevice   // 端末を固定（停車だが端末が揺れている＝READYにしない）
+        case stop           // 停止してください（動いている稀な場面）
+
+        var text: String {
+            switch self {
+            case .acquiringGPS: return "GPS取得中"
+            case .ready:        return "READY"
+            case .secureDevice: return "端末を固定"
+            case .stop:         return "停止してください"
+            }
+        }
+    }
+
+    /// ARMED 表示フェーズ＋端末の安定状態から「画面の大きな文言」を導く純粋関数。
+    /// 文言の決定ロジックをここに集約し、実機走行なしでリプレイ/ユニットテストできるようにする
+    /// （UI 側はこの結果を見て色・サイズだけ付ける）。
+    /// 端末が揺れている(deviceSteady=false)時は .ready でも緑「READY」を出さず .secureDevice にする。
+    nonisolated static func armedDisplayLabel(phase: ArmedPhase, deviceSteady: Bool) -> ArmedDisplayLabel {
+        switch phase {
+        case .acquiringGPS:             return .acquiringGPS
+        case .ready:                    return deviceSteady ? .ready : .secureDevice
+        case .driving, .confirmingStop: return .stop
+        }
+    }
+
+    /// 現在の ARMED 表示ラベル（UI から参照）。
+    var armedDisplayLabel: ArmedDisplayLabel {
+        Self.armedDisplayLabel(phase: armedPhase, deviceSteady: deviceSteadyWhileArmed)
+    }
+
     init() {
         location.onSpeedUpdate = { [weak self] speedMs, timestamp, speedAccuracy, horizontalAccuracy, coordinate in
             self?.handleGPS(speedMs: speedMs,

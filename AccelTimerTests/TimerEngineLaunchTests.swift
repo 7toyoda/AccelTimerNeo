@@ -252,4 +252,37 @@ final class TimerEngineLaunchTests: XCTestCase {
                                    inPoorGPSLaunchGrace: false),
             .acquiringGPS)
     }
+
+    // MARK: - 表示ラベル（画面の大きな文言）— 実機走行なしで検証
+
+    /// GPS不良 → 「GPS取得中」。端末安定の有無に関わらず GPS取得中。
+    func testDisplayLabel_acquiringGPS() {
+        XCTAssertEqual(TimerEngine.armedDisplayLabel(phase: .acquiringGPS, deviceSteady: true), .acquiringGPS)
+        XCTAssertEqual(TimerEngine.armedDisplayLabel(phase: .acquiringGPS, deviceSteady: false), .acquiringGPS)
+    }
+
+    /// 停車確認済み＋端末が安定 → 緑「READY」。
+    func testDisplayLabel_readySteady_isReady() {
+        XCTAssertEqual(TimerEngine.armedDisplayLabel(phase: .ready, deviceSteady: true), .ready)
+    }
+
+    /// 停車確認済みでも端末が揺れている → 緑READYにせず「端末を固定」（精度優先）。
+    func testDisplayLabel_readyShaky_isSecureDevice() {
+        XCTAssertEqual(TimerEngine.armedDisplayLabel(phase: .ready, deviceSteady: false), .secureDevice)
+    }
+
+    /// 動いている（driving / confirmingStop）→ どちらも「停止してください」に統合（「走行中」廃止）。
+    func testDisplayLabel_movingPhases_isStop() {
+        XCTAssertEqual(TimerEngine.armedDisplayLabel(phase: .driving, deviceSteady: true), .stop)
+        XCTAssertEqual(TimerEngine.armedDisplayLabel(phase: .driving, deviceSteady: false), .stop)
+        XCTAssertEqual(TimerEngine.armedDisplayLabel(phase: .confirmingStop, deviceSteady: true), .stop)
+    }
+
+    /// 文言（ソース言語＝ローカライズキー）が意図通りか。
+    func testDisplayLabel_text() {
+        XCTAssertEqual(TimerEngine.ArmedDisplayLabel.acquiringGPS.text, "GPS取得中")
+        XCTAssertEqual(TimerEngine.ArmedDisplayLabel.ready.text, "READY")
+        XCTAssertEqual(TimerEngine.ArmedDisplayLabel.secureDevice.text, "端末を固定")
+        XCTAssertEqual(TimerEngine.ArmedDisplayLabel.stop.text, "停止してください")
+    }
 }
