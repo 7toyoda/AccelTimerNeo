@@ -695,11 +695,20 @@ struct MeasureView: View {
                         .foregroundStyle(.orange)
                         .opacity(gpsPulse ? 1.0 : 0.5)
                 case .ready:
-                    Text("READY")
-                        .font(.system(size: 48, weight: .black, design: .rounded))
-                        .foregroundStyle(.green)
-                        .opacity(readyPulse ? 1.0 : 0.55)
-                        .scaleEffect(readyPulse ? 1.04 : 1.0)
+                    // 端末が揺れている時は緑「READY」を出さない（発進点の精度が落ちるため）。
+                    // 計測トリガー自体はゲートしないので、固定せず発進しても計測はされ手持ちフラグが付く。
+                    if engine.deviceSteadyWhileArmed {
+                        Text("READY")
+                            .font(.system(size: 48, weight: .black, design: .rounded))
+                            .foregroundStyle(.green)
+                            .opacity(readyPulse ? 1.0 : 0.55)
+                            .scaleEffect(readyPulse ? 1.04 : 1.0)
+                    } else {
+                        Text("端末を固定")
+                            .font(.system(size: 34, weight: .black, design: .rounded))
+                            .foregroundStyle(.orange)
+                            .opacity(gpsPulse ? 1.0 : 0.5)
+                    }
                 case .driving, .confirmingStop:
                     // 計測は必ず0km/hから始まるため、まだ止まっていない＝計測できない。
                     // 「走行中」という状態語は出さず、止まれば計測できることだけを正直に伝える。
