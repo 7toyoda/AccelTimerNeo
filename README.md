@@ -1,45 +1,91 @@
 # AccelTimerNeo
 
-AccelTimerNeo is an open-source interval timer app for iPhone.
+An open-source interval timer for iPhone, built with Swift and SwiftUI.
 
-The goal of this project is to provide a simple, reliable, and accessible timer for fitness, rehabilitation, study, and everyday activities.
+AccelTimerNeo is designed to be a simple, reliable, and easy-to-use timer for fitness, running, HIIT, rehabilitation, study sessions, cooking, and everyday activities.
 
-## Features
+The project is actively developed with the goal of creating a modern, accessible timer application while exploring AI-assisted software development.
 
-* Easy-to-use interval timer
-* Voice announcements
-* Simple and clean interface
-* Designed for iPhone
-* Open source
+---
 
-## Why AccelTimerNeo?
+## ✨ Features
 
-AccelTimerNeo is a new evolution of AccelTimer.
+- ⏱️ Flexible interval timer
+- 🔊 Voice announcements
+- 📱 Native SwiftUI interface
+- 🚀 Optimized for iPhone
+- 🎯 Simple and distraction-free design
+- ❤️ Open source
 
-The project focuses on improving usability, accessibility, and AI-assisted development while remaining easy for everyone to use.
+---
 
-## Roadmap
+## 🚧 Roadmap
 
-* Apple Watch support
-* Live Activities
-* Widgets
-* Better accessibility
-* More customization
+Planned features include:
 
-## Development
+- Apple Watch support
+- Home Screen Widgets
+- Live Activities
+- Dynamic Island support
+- More timer presets
+- Improved accessibility
+- Multi-language support
 
-Requirements:
+---
 
-* Xcode 16+
-* iOS 18+
+## 📸 Screenshots
 
-Clone the repository and open `AccelTimerNeo.xcodeproj`.
+*Coming soon.*
 
-## Contributing
+---
 
-Bug reports, feature requests, and pull requests are welcome.
+## 🛠 Requirements
 
-## License
+- Xcode 16 or later
+- iOS 18 or later
+- Swift 6
+
+---
+
+## 🚀 Getting Started
+
+Clone the repository:
+
+```bash
+git clone git@github-7toyoda:7toyoda/AccelTimerNeo.git
+```
+
+Open:
+
+```
+AccelTimerNeo.xcodeproj
+```
+
+Build and run on your simulator or device.
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome.
+
+If you'd like to improve the project:
+
+- Report bugs
+- Suggest new features
+- Improve documentation
+- Submit Pull Requests
+
+Please open an Issue before making major changes.
+
+---
+
+## 🎯 Vision
+
+AccelTimerNeo aims to become a modern open-source timer application that demonstrates how AI and human developers can build high-quality iOS software together.
+
+---
+
+## 📄 License
 
 MIT License
-
