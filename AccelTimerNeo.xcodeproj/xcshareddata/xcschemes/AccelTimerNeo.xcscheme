@@ -16,9 +16,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "594BB0002FC162D00009A57F"
-               BuildableName = "AccelTimer.app"
-               BlueprintName = "AccelTimer"
-               ReferencedContainer = "container:AccelTimer.xcodeproj">
+               BuildableName = "AccelTimerNeo.app"
+               BlueprintName = "AccelTimerNeo"
+               ReferencedContainer = "container:AccelTimerNeo.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -35,9 +35,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "AC7E000000000000000000A1"
-               BuildableName = "AccelTimerTests.xctest"
-               BlueprintName = "AccelTimerTests"
-               ReferencedContainer = "container:AccelTimer.xcodeproj">
+               BuildableName = "AccelTimerNeoTests.xctest"
+               BlueprintName = "AccelTimerNeoTests"
+               ReferencedContainer = "container:AccelTimerNeo.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -58,9 +58,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "594BB0002FC162D00009A57F"
-            BuildableName = "AccelTimer.app"
-            BlueprintName = "AccelTimer"
-            ReferencedContainer = "container:AccelTimer.xcodeproj">
+            BuildableName = "AccelTimerNeo.app"
+            BlueprintName = "AccelTimerNeo"
+            ReferencedContainer = "container:AccelTimerNeo.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
       <StoreKitConfigurationFileReference
@@ -78,9 +78,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "594BB0002FC162D00009A57F"
-            BuildableName = "AccelTimer.app"
-            BlueprintName = "AccelTimer"
-            ReferencedContainer = "container:AccelTimer.xcodeproj">
+            BuildableName = "AccelTimerNeo.app"
+            BlueprintName = "AccelTimerNeo"
+            ReferencedContainer = "container:AccelTimerNeo.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

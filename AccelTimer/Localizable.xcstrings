@@ -1,842 +1,6 @@
 {
   "sourceLanguage" : "ja",
   "strings" : {
-    "端末を固定" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Secure device"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "기기 고정"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "固定设备"
-          }
-        }
-      }
-    },
-    "GPS取得中" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Acquiring GPS"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "GPS 수신 중"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "正在获取GPS"
-          }
-        }
-      }
-    },
-    "停止してください" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Please stop"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "정지해 주세요"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "请停车"
-          }
-        }
-      }
-    },
-    "一度停止すると計測を開始できます" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Stop once to start measuring"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "한 번 정지하면 측정을 시작할 수 있습니다"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "停车一次即可开始测量"
-          }
-        }
-      }
-    },
-    "GPSの取得を待っています" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Waiting for GPS"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "GPS 수신을 기다리는 중"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "正在等待 GPS"
-          }
-        }
-      }
-    },
-    "購入済み（無制限）" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Purchased (unlimited)"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "구매 완료 (무제한)"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已购买（无限制）"
-          }
-        }
-      }
-    },
-    "無料体験（%lld回）を使い切りました。現在は1日1回まで無料で計測できます。買い切りで無制限になります。" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "You've used all %lld free trial runs. For now you can measure once a day for free. A one-time purchase makes it unlimited."
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "무료 체험(%lld회)을 모두 사용했습니다. 현재는 하루 1회까지 무료로 측정할 수 있습니다. 한 번 구매하면 무제한이 됩니다."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已用完免费体验（%lld次）。目前每天可免费测量一次。一次性购买即可无限使用。"
-          }
-        }
-      }
-    },
-    "無料体験の残り" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Free trial remaining"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "남은 무료 체험"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "剩余免费体验"
-          }
-        }
-      }
-    },
-    "使い切ると1日1回まで無料。買い切りで無制限になります。" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Once used up, one free run per day. A one-time purchase makes it unlimited."
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "다 쓰면 하루 1회까지 무료입니다. 한 번 구매하면 무제한이 됩니다."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "用完后每天可免费一次。一次性购买即可无限使用。"
-          }
-        }
-      }
-    },
-    "無制限に解放（購入）" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Unlock unlimited (Purchase)"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "무제한 해제 (구매)"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "解锁无限（购买）"
-          }
-        }
-      }
-    },
-    "表示単位" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Display unit"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "표시 단위"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "显示单位"
-          }
-        }
-      }
-    },
-    "速度の単位" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Speed unit"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "속도 단위"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "速度单位"
-          }
-        }
-      }
-    },
-    "計測完了後、停車すると自動で次の計測を開始します" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "After measurement, stopping automatically starts the next one"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "측정 완료 후 정차하면 자동으로 다음 측정을 시작합니다"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "测量完成后，停车将自动开始下一次测量"
-          }
-        }
-      }
-    },
-    "計測完了後、「再計測」ボタンを押すまで結果を表示し続けます" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "After measurement, keeps showing the result until you tap “Measure again”"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "측정 완료 후 “다시 측정” 버튼을 누를 때까지 결과를 계속 표시합니다"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "测量完成后，将持续显示结果，直到按下“重新测量”按钮"
-          }
-        }
-      }
-    },
-    "%@ %@ 通過時に速度を読み上げます" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Announces the speed when passing %1$@ %2$@"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ %2$@ 통과 시 속도를 음성으로 안내합니다"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "通过 %1$@ %2$@ 时播报速度"
-          }
-        }
-      }
-    },
-    "計測を無制限に（回数制限なし）" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Unlimited measurements (no run limit)"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "측정 무제한 (횟수 제한 없음)"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无限测量（无次数限制）"
-          }
-        }
-      }
-    },
-    "1日1回の制限を解除" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Removes the once-a-day limit"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "하루 1회 제한 해제"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "解除每天一次的限制"
-          }
-        }
-      }
-    },
-    "一度の購入でずっと使える" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "One purchase, yours forever"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "한 번 구매로 평생 사용"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "一次购买，永久使用"
-          }
-        }
-      }
-    },
-    "計測を無制限に解放" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Unlock unlimited measurements"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "측정 무제한 해제"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "解锁无限测量"
-          }
-        }
-      }
-    },
-    "%@ で無制限に解放" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Unlock unlimited for %@"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@으로 무제한 해제"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ 解锁无限"
-          }
-        }
-      }
-    },
-    "購入して無制限に解放" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Purchase to unlock unlimited"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "구매하여 무제한 해제"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "购买以解锁无限"
-          }
-        }
-      }
-    },
-    "60、計測完了" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "60, measurement complete"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "60, 측정 완료"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "60，测量完成"
-          }
-        }
-      }
-    },
-    "S = スタート  G = 計測終了地点" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "S = Start   G = End point"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "S = 출발   G = 측정 종료 지점"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "S = 起点   G = 测量终点"
-          }
-        }
-      }
-    },
-    "計測終了地点" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "End point"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "측정 종료 지점"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "测量终点"
-          }
-        }
-      }
-    },
-    "計測終了付近のGPS速度精度が±%@%@に低下しています。" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "GPS speed accuracy near the finish dropped to ±%1$@%2$@."
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "측정 종료 부근의 GPS 속도 정확도가 ±%1$@%2$@로 저하되었습니다."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "接近测量终点时GPS速度精度下降至±%1$@%2$@。"
-          }
-        }
-      }
-    },
-    "今日の無料計測は終了です" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No more free measurements today"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "오늘의 무료 측정이 끝났습니다"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "今日的免费测量已结束"
-          }
-        }
-      }
-    },
-    "無料体験（%lld回）を使い切りました。明日また1回計測できます。買い切りで今すぐ無制限になります。" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "You've used all %lld free trial runs. You can measure once more tomorrow. Buy now for unlimited."
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "무료 체험(%lld회)을 모두 사용했습니다. 내일 다시 1회 측정할 수 있습니다. 지금 구매하면 무제한이 됩니다."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已用完免费体验（%lld次）。明天可再测量一次。立即购买即可无限使用。"
-          }
-        }
-      }
-    },
-    "本日無料分: 使用済み" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Today's free run: used"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "오늘 무료분: 사용함"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "今日免费：已使用"
-          }
-        }
-      }
-    },
-    "本日無料: あと1回" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Free today: 1 left"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "오늘 무료: 1회 남음"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "今日免费：还剩1次"
-          }
-        }
-      }
-    },
-    "無料 残り%lld/%lld" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Free: %1$lld/%2$lld left"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "무료 잔여 %1$lld/%2$lld"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "免费剩余 %1$lld/%2$lld"
-          }
-        }
-      }
-    },
-    "走行中" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Driving"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "주행 중"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "行驶中"
-          }
-        }
-      }
-    },
-    "停車すると計測できます" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Stop to measure"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "정차하면 측정할 수 있습니다"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "停车后即可测量"
-          }
-        }
-      }
-    },
-    "「設定を開く」→ AccelTimer →「カメラ」をオンにしてください" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tap “Open Settings” → AccelTimer → turn on “Camera”"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "‘설정 열기’ → AccelTimer → ‘카메라’를 켜 주세요"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "点击“打开设置”→ AccelTimer → 开启“相机”"
-          }
-        }
-      }
-    },
-    "「設定を開く」→ AccelTimer →「マイク」をオンにしてください" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tap “Open Settings” → AccelTimer → turn on “Microphone”"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "‘설정 열기’ → AccelTimer → ‘마이크’를 켜 주세요"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "点击“打开设置”→ AccelTimer → 开启“麦克风”"
-          }
-        }
-      }
-    },
-    "カメラ権限がないため、動画録画は使えません" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Video recording is unavailable without camera access"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "카메라 권한이 없어 동영상 녹화를 사용할 수 없습니다"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无相机权限，无法使用视频录制"
-          }
-        }
-      }
-    },
-    "マイク権限がないため、音声録音は使えません" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Audio recording is unavailable without microphone access"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "마이크 권한이 없어 음성 녹음을 사용할 수 없습니다"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无麦克风权限，无法使用音频录制"
-          }
-        }
-      }
-    },
-    "動画録画にはカメラの許可が必要です。「設定を開く」→ AccelTimer →「カメラ」をオンにすると、戻った時に自動でオンになります。" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Video recording requires camera access. Tap “Open Settings” → AccelTimer → turn on “Camera,” and it will turn on automatically when you return."
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "동영상 녹화에는 카메라 권한이 필요합니다. ‘설정 열기’ → AccelTimer → ‘카메라’를 켜면 돌아왔을 때 자동으로 켜집니다."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "录制视频需要相机权限。点击“打开设置”→ AccelTimer → 开启“相机”，返回后会自动开启。"
-          }
-        }
-      }
-    },
-    "走行音の録音にはマイクの許可が必要です。「設定を開く」→ AccelTimer →「マイク」をオンにすると、戻った時に自動でオンになります。音声なしでの動画録画は可能です。" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Recording audio requires microphone access. Tap “Open Settings” → AccelTimer → turn on “Microphone,” and it will turn on automatically when you return. Video can still be recorded without audio."
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "주행음 녹음에는 마이크 권한이 필요합니다. ‘설정 열기’ → AccelTimer → ‘마이크’를 켜면 돌아왔을 때 자동으로 켜집니다. 소리 없이 동영상 녹화는 가능합니다."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "录制声音需要麦克风权限。点击“打开设置”→ AccelTimer → 开启“麦克风”，返回后会自动开启。也可在无声音的情况下录制视频。"
-          }
-        }
-      }
-    },
     " " : {
       "comment" : "A placeholder string that can be used to create spacing in SwiftUI views.",
       "isCommentAutoGenerated" : true
@@ -869,6 +33,52 @@
         }
       }
     },
+    "「設定を開く」→ AccelTimer →「カメラ」をオンにしてください" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tap “Open Settings” → AccelTimer → turn on “Camera”"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "‘설정 열기’ → AccelTimer → ‘카메라’를 켜 주세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "点击“打开设置”→ AccelTimer → 开启“相机”"
+          }
+        }
+      }
+    },
+    "「設定を開く」→ AccelTimer →「マイク」をオンにしてください" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tap “Open Settings” → AccelTimer → turn on “Microphone”"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "‘설정 열기’ → AccelTimer → ‘마이크’를 켜 주세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "点击“打开设置”→ AccelTimer → 开启“麦克风”"
+          }
+        }
+      }
+    },
     "%@ %@" : {
       "comment" : "A flag and country name displayed in a small font below the date.",
       "isCommentAutoGenerated" : true,
@@ -881,7 +91,30 @@
         }
       }
     },
+    "%@ %@ 通過時に速度を読み上げます" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Announces the speed when passing %1$@ %2$@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ %2$@ 통과 시 속도를 음성으로 안내합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通过 %1$@ %2$@ 时播报速度"
+          }
+        }
+      }
+    },
     "%@ で全機能を解放" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -908,6 +141,32 @@
           }
         }
       }
+    },
+    "%@ で無制限に解放" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unlock unlimited for %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@으로 무제한 해제"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 解锁无限"
+          }
+        }
+      }
+    },
+    "%@ を、プロ級の精度で。" : {
+      "comment" : "A centered headline describing the main feature of the app.",
+      "isCommentAutoGenerated" : true
     },
     "%@、NEW RECORD" : {
       "localizations" : {
@@ -938,6 +197,7 @@
       }
     },
     "%lld / %lld 件" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -960,7 +220,6 @@
       }
     },
     "%lld / %lld 回" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1004,11 +263,8 @@
       "comment" : "A label describing the GPS accuracy of a measurement record. The argument is the string “%.0f”.",
       "isCommentAutoGenerated" : true
     },
-    "0 → 100 km/h" : {
-      "comment" : "The title of the first section in the result card view, describing the speed range.",
-      "isCommentAutoGenerated" : true
-    },
     "0–100 km/h を、プロ級の精度で。" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1034,7 +290,30 @@
       "comment" : "A label indicating a split in time, with the first argument being the upper bound of the split.",
       "isCommentAutoGenerated" : true
     },
+    "1日1回の制限を解除" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Removes the once-a-day limit"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "하루 1회 제한 해제"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "解除每天一次的限制"
+          }
+        }
+      }
+    },
     "40 / 60 / 80 / 100 km/h 通過時に速度を読み上げます" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1062,7 +341,34 @@
         }
       }
     },
+    "60、NEW RECORD" : {
+      "comment" : "Speech output when a user records a new best time for 60mph.",
+      "isCommentAutoGenerated" : true
+    },
+    "60、計測完了" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "60, measurement complete"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "60, 측정 완료"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "60，测量完成"
+          }
+        }
+      }
+    },
     "100 km/h 到達後、「再計測」ボタンを押すまで結果を表示し続けます" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1091,6 +397,7 @@
       }
     },
     "100 km/h 到達後、停車すると自動で次の計測を開始します" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1147,6 +454,7 @@
       }
     },
     "100km/h到達" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1175,6 +483,7 @@
       }
     },
     "100km/h到達付近のGPS速度精度が±%@km/hに低下しています。" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1201,14 +510,6 @@
           }
         }
       }
-    },
-    "AccelTimer" : {
-      "comment" : "The title of the app.",
-      "isCommentAutoGenerated" : true
-    },
-    "ACCELTIMER" : {
-      "comment" : "The name of the app.",
-      "isCommentAutoGenerated" : true
     },
     "BEST:" : {
 
@@ -1267,7 +568,12 @@
         }
       }
     },
+    "GPSのドップラー速度で%@のタイムを高精度に計測します。" : {
+      "comment" : "A bullet point in the checkout view explaining that the app will use GPS to measure speed more accurately. The text inside the bullet point is a localized string.",
+      "isCommentAutoGenerated" : true
+    },
     "GPSのドップラー速度で0–100km/hのタイムを高精度に計測します。" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1285,6 +591,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "通过 GPS 多普勒速度高精度测量 0–100 km/h 的成绩。"
+          }
+        }
+      }
+    },
+    "GPSの取得を待っています" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Waiting for GPS"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GPS 수신을 기다리는 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在等待 GPS"
           }
         }
       }
@@ -1317,7 +645,31 @@
         }
       }
     },
+    "GPS取得中" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Acquiring GPS"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GPS 수신 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在获取GPS"
+          }
+        }
+      }
+    },
     "GPS確認中" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1349,16 +701,15 @@
       "comment" : "A label displayed above the speed display.",
       "isCommentAutoGenerated" : true
     },
+    "mph" : {
+
+    },
     "NEW" : {
       "comment" : "A label indicating a new personal best time.",
       "isCommentAutoGenerated" : true
     },
     "OK" : {
       "comment" : "The label of an OK button.",
-      "isCommentAutoGenerated" : true
-    },
-    "READY" : {
-      "comment" : "A label displayed when the measure interface is ready to be used.",
       "isCommentAutoGenerated" : true
     },
     "REC" : {
@@ -1369,6 +720,7 @@
 
     },
     "S = スタート  G = 100km/h到達" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1420,6 +772,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "S = 起点   G = 停车点"
+          }
+        }
+      }
+    },
+    "S = スタート  G = 計測終了地点" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "S = Start   G = End point"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "S = 출발   G = 측정 종료 지점"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "S = 起点   G = 测量终点"
           }
         }
       }
@@ -1526,6 +900,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "相机访问被拒绝。请在“设置”中允许。"
+          }
+        }
+      }
+    },
+    "カメラ権限がないため、動画録画は使えません" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Video recording is unavailable without camera access"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "카메라 권한이 없어 동영상 녹화를 사용할 수 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无相机权限，无法使用视频录制"
           }
         }
       }
@@ -1801,6 +1197,7 @@
       }
     },
     "プロ仕様の精度を、すべて解放" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1906,6 +1303,28 @@
         }
       }
     },
+    "マイク権限がないため、音声録音は使えません" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Audio recording is unavailable without microphone access"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "마이크 권한이 없어 음성 녹음을 사용할 수 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无麦克风权限，无法使用音频录制"
+          }
+        }
+      }
+    },
     "ライセンス" : {
       "localizations" : {
         "en" : {
@@ -1958,6 +1377,50 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "一次购买，永久使用"
+          }
+        }
+      }
+    },
+    "一度の購入でずっと使える" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "One purchase, yours forever"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "한 번 구매로 평생 사용"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一次购买，永久使用"
+          }
+        }
+      }
+    },
+    "一度停止すると計測を開始できます" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stop once to start measuring"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "한 번 정지하면 측정을 시작할 수 있습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "停车一次即可开始测量"
           }
         }
       }
@@ -2015,6 +1478,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "排序"
+          }
+        }
+      }
+    },
+    "今日の無料計測は終了です" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No more free measurements today"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "오늘의 무료 측정이 끝났습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今日的免费测量已结束"
           }
         }
       }
@@ -2113,35 +1598,53 @@
         }
       }
     },
-    "停止確認中" : {
+    "使い切ると1日1回まで無料。買い切りで無制限になります。" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Confirming stop"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "停止確認中"
+            "value" : "Once used up, one free run per day. A one-time purchase makes it unlimited."
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "정지 확인 중"
+            "value" : "다 쓰면 하루 1회까지 무료입니다. 한 번 구매하면 무제한이 됩니다."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "正在确认停止"
+            "value" : "用完后每天可免费一次。一次性购买即可无限使用。"
+          }
+        }
+      }
+    },
+    "停止してください" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Please stop"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "정지해 주세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请停车"
           }
         }
       }
     },
     "停止を確認しています" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2169,7 +1672,37 @@
         }
       }
     },
+    "停止確認中" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Confirming stop"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "停止確認中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "정지 확인 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在确认停止"
+          }
+        }
+      }
+    },
     "停車してください" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2193,6 +1726,29 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "请停车"
+          }
+        }
+      }
+    },
+    "停車すると計測できます" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stop to measure"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "정차하면 측정할 수 있습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "停车后即可测量"
           }
         }
       }
@@ -2339,6 +1895,7 @@
       }
     },
     "全記録のスプリット・グラフ・地図を保持" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2613,7 +2170,34 @@
         }
       }
     },
+    "動画録画にはカメラの許可が必要です。「設定を開く」→ %@ →「カメラ」をオンにすると、戻った時に自動でオンになります。" : {
+
+    },
+    "動画録画にはカメラの許可が必要です。「設定を開く」→ AccelTimer →「カメラ」をオンにすると、戻った時に自動でオンになります。" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Video recording requires camera access. Tap “Open Settings” → AccelTimer → turn on “Camera,” and it will turn on automatically when you return."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "동영상 녹화에는 카메라 권한이 필요합니다. ‘설정 열기’ → AccelTimer → ‘카메라’를 켜면 돌아왔을 때 자동으로 켜집니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "录制视频需要相机权限。点击“打开设置”→ AccelTimer → 开启“相机”，返回后会自动开启。"
+          }
+        }
+      }
+    },
     "動画録画にはカメラの許可が必要です。設定アプリの AccelTimer でカメラをオンにしてください。" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2764,6 +2348,7 @@
       }
     },
     "完全停止でREADY状態になります" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2849,6 +2434,7 @@
       }
     },
     "履歴を無制限に保存" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2871,6 +2457,7 @@
       }
     },
     "履歴を無制限に解放（購入）" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3162,6 +2749,50 @@
         }
       }
     },
+    "本日無料: あと1回" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Free today: 1 left"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "오늘 무료: 1회 남음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今日免费：还剩1次"
+          }
+        }
+      }
+    },
+    "本日無料分: 使用済み" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Today's free run: used"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "오늘 무료분: 사용함"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今日免费：已使用"
+          }
+        }
+      }
+    },
     "次の画面で「Appの使用中は許可」を選んでください。" : {
       "localizations" : {
         "en" : {
@@ -3206,7 +2837,118 @@
         }
       }
     },
+    "無制限に解放（購入）" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unlock unlimited (Purchase)"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "무제한 해제 (구매)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "解锁无限（购买）"
+          }
+        }
+      }
+    },
+    "無料 残り%lld/%lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Free: %1$lld/%2$lld left"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "무료 잔여 %1$lld/%2$lld"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "免费剩余 %1$lld/%2$lld"
+          }
+        }
+      }
+    },
+    "無料体験（%lld回）を使い切りました。明日また1回計測できます。買い切りで今すぐ無制限になります。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You've used all %lld free trial runs. You can measure once more tomorrow. Buy now for unlimited."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "무료 체험(%lld회)을 모두 사용했습니다. 내일 다시 1회 측정할 수 있습니다. 지금 구매하면 무제한이 됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已用完免费体验（%lld次）。明天可再测量一次。立即购买即可无限使用。"
+          }
+        }
+      }
+    },
+    "無料体験（%lld回）を使い切りました。現在は1日1回まで無料で計測できます。買い切りで無制限になります。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You've used all %lld free trial runs. For now you can measure once a day for free. A one-time purchase makes it unlimited."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "무료 체험(%lld회)을 모두 사용했습니다. 현재는 하루 1회까지 무료로 측정할 수 있습니다. 한 번 구매하면 무제한이 됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已用完免费体验（%lld次）。目前每天可免费测量一次。一次性购买即可无限使用。"
+          }
+        }
+      }
+    },
+    "無料体験の残り" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Free trial remaining"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "남은 무료 체험"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "剩余免费体验"
+          }
+        }
+      }
+    },
     "無料保存の残り" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3370,6 +3112,29 @@
         }
       }
     },
+    "端末を固定" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Secure device"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "기기 고정"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "固定设备"
+          }
+        }
+      }
+    },
     "端末を固定してください" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -3473,6 +3238,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "编辑"
+          }
+        }
+      }
+    },
+    "表示単位" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Display unit"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "표시 단위"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "显示单位"
           }
         }
       }
@@ -3636,6 +3423,7 @@
       }
     },
     "計測は無料・無制限。履歴の保存は%lld件まで無料です。" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -3653,6 +3441,50 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "测量免费且无限制。最多可免费保存 %lld 条记录。"
+          }
+        }
+      }
+    },
+    "計測を無制限に（回数制限なし）" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unlimited measurements (no run limit)"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "측정 무제한 (횟수 제한 없음)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无限测量（无次数限制）"
+          }
+        }
+      }
+    },
+    "計測を無制限に解放" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unlock unlimited measurements"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "측정 무제한 해제"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "解锁无限测量"
           }
         }
       }
@@ -3769,6 +3601,50 @@
         }
       }
     },
+    "計測完了後、「再計測」ボタンを押すまで結果を表示し続けます" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "After measurement, keeps showing the result until you tap “Measure again”"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "측정 완료 후 “다시 측정” 버튼을 누를 때까지 결과를 계속 표시합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "测量完成后，将持续显示结果，直到按下“重新测量”按钮"
+          }
+        }
+      }
+    },
+    "計測完了後、停車すると自動で次の計測を開始します" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "After measurement, stopping automatically starts the next one"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "측정 완료 후 정차하면 자동으로 다음 측정을 시작합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "测量完成后，停车将自动开始下一次测量"
+          }
+        }
+      }
+    },
     "計測完了後の動作" : {
       "localizations" : {
         "en" : {
@@ -3825,6 +3701,34 @@
         }
       }
     },
+    "計測画面・履歴・詳細を 0-60 mph 中心で表示します。計測完了判定は引き続き 100 km/h 到達です。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shows the measurement screen, history, and details around 0-60 mph. Completion is still based on reaching 100 km/h."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "計測画面・履歴・詳細を 0-60 mph 中心で表示します。計測完了判定は引き続き 100 km/h 到達です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "측정 화면, 기록, 상세를 0-60 mph 중심으로 표시합니다. 완료 판정은 계속 100 km/h 도달 기준입니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "测量画面、历史记录和详情以 0-60 mph 为中心显示。完成判定仍以达到 100 km/h 为准。"
+          }
+        }
+      }
+    },
     "計測画面・履歴・詳細を 0-100 km/h 中心で表示します。計測完了判定も 100 km/h 到達です。" : {
       "localizations" : {
         "en" : {
@@ -3853,30 +3757,46 @@
         }
       }
     },
-    "計測画面・履歴・詳細を 0-60 mph 中心で表示します。計測完了判定は引き続き 100 km/h 到達です。" : {
+    "計測終了付近のGPS速度精度が±%@%@に低下しています。" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Shows the measurement screen, history, and details around 0-60 mph. Completion is still based on reaching 100 km/h."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "計測画面・履歴・詳細を 0-60 mph 中心で表示します。計測完了判定は引き続き 100 km/h 到達です。"
+            "value" : "GPS speed accuracy near the finish dropped to ±%1$@%2$@."
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "측정 화면, 기록, 상세를 0-60 mph 중심으로 표시합니다. 완료 판정은 계속 100 km/h 도달 기준입니다."
+            "value" : "측정 종료 부근의 GPS 속도 정확도가 ±%1$@%2$@로 저하되었습니다."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "测量画面、历史记录和详情以 0-60 mph 为中心显示。完成判定仍以达到 100 km/h 为准。"
+            "value" : "接近测量终点时GPS速度精度下降至±%1$@%2$@。"
+          }
+        }
+      }
+    },
+    "計測終了地点" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "End point"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "측정 종료 지점"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "测量终点"
           }
         }
       }
@@ -4072,7 +3992,30 @@
         }
       }
     },
+    "購入して無制限に解放" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Purchase to unlock unlimited"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "구매하여 무제한 해제"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "购买以解锁无限"
+          }
+        }
+      }
+    },
     "購入して解放" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4157,6 +4100,7 @@
       }
     },
     "購入済み（全機能解放）" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4180,6 +4124,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "已购买（全部功能已解锁）"
+          }
+        }
+      }
+    },
+    "購入済み（無制限）" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Purchased (unlimited)"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "구매 완료 (무제한)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已购买（无限制）"
           }
         }
       }
@@ -4208,6 +4174,29 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "行驶路线"
+          }
+        }
+      }
+    },
+    "走行中" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Driving"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "주행 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "行驶中"
           }
         }
       }
@@ -4263,7 +4252,34 @@
         }
       }
     },
+    "走行音の録音にはマイクの許可が必要です。「設定を開く」→ %@ →「マイク」をオンにすると、戻った時に自動でオンになります。音声なしでの動画録画は可能です。" : {
+
+    },
+    "走行音の録音にはマイクの許可が必要です。「設定を開く」→ AccelTimer →「マイク」をオンにすると、戻った時に自動でオンになります。音声なしでの動画録画は可能です。" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recording audio requires microphone access. Tap “Open Settings” → AccelTimer → turn on “Microphone,” and it will turn on automatically when you return. Video can still be recorded without audio."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "주행음 녹음에는 마이크 권한이 필요합니다. ‘설정 열기’ → AccelTimer → ‘마이크’를 켜면 돌아왔을 때 자동으로 켜집니다. 소리 없이 동영상 녹화는 가능합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "录制声音需要麦克风权限。点击“打开设置”→ AccelTimer → 开启“麦克风”，返回后会自动开启。也可在无声音的情况下录制视频。"
+          }
+        }
+      }
+    },
     "走行音の録音にはマイクの許可が必要です。設定アプリの AccelTimer でマイクをオンにしてください。音声なしでの動画録画は可能です。" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4369,7 +4385,56 @@
         }
       }
     },
+    "速度±%@%@ BEST" : {
+      "comment" : "A label indicating the GPS speed accuracy of the device, categorized as \"BEST\", \"GOOD\", \"FAIR\", or \"POOR\". The value inside the parentheses is a speed in the same unit as the one shown in the label. The argument is the string “%.1f”.",
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "速度±%1$@%2$@ BEST"
+          }
+        }
+      }
+    },
+    "速度±%@%@ FAIR" : {
+      "comment" : "The string \"速度±\\(v)\\(unit.label) FAIR\" is used when the GPS speed accuracy is between 1.0 and 2.0 m/s. The argument is the string “%.1f”.",
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "速度±%1$@%2$@ FAIR"
+          }
+        }
+      }
+    },
+    "速度±%@%@ GOOD" : {
+      "comment" : "The speed accuracy of the GPS, displayed as a label. The value is formatted to one decimal place. The argument is the string “%.1f”.",
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "速度±%1$@%2$@ GOOD"
+          }
+        }
+      }
+    },
+    "速度±%@%@ POOR" : {
+      "comment" : "The last label in the sequence. The argument is the string “%.1f”.",
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "速度±%1$@%2$@ POOR"
+          }
+        }
+      }
+    },
     "速度±%@km/h BEST" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4398,6 +4463,7 @@
       }
     },
     "速度±%@km/h FAIR" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4426,6 +4492,7 @@
       }
     },
     "速度±%@km/h GOOD" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4454,6 +4521,7 @@
       }
     },
     "速度±%@km/h POOR" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -4505,6 +4573,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "速度图表"
+          }
+        }
+      }
+    },
+    "速度の単位" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Speed unit"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "속도 단위"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "速度单位"
           }
         }
       }
