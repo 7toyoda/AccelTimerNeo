@@ -14,8 +14,7 @@
 - **最優先は計測精度**（GPS/CoreMotion フュージョン・発進検出・スプリット補間）。
   「他機能のために精度を下げない」のがユーザーの一貫した要望。
 - **コミット & push**：意味のある作業単位を完了したら、確認なしで
-  `git add -A && git commit && git push`（origin = GitHub `toy0da/accel-timer`、
-  認証は macOS キーチェーンの Fine-grained PAT、2026-09-13 失効予定）まで実施してよい。
+  `git add -A && git commit && git push`（origin = GitHub `7toyoda/AccelTimerNeo`）まで実施してよい。
 - **バージョンを上げる**：コード変更を伴う修正はコミット前に
   `Config/Version.xcconfig` の `MARKETING_VERSION` のパッチを +1
   （例 0.1.41 → 0.1.42）。正式リリース（1.0.0 等）への昇格は要相談。ドキュメント
@@ -30,8 +29,8 @@
 iPhone 向け（開発機 iPhone 16 Pro Max）の高精度 0–100 km/h 加速タイマー iOS アプリ。  
 Draggy に匹敵する精度（±0.05〜0.1 秒）を目標とするネイティブアプリ。
 
-- Bundle ID: `com.acceltimer.app.AccelTimer`
-- App Name: `AccelTimer`
+- Bundle ID: `com.acceltimer.app.AccelTimerNeo`
+- App Name: `AccelTimerNeo`
 - 対象 OS: iOS 17.0+
 - 開発環境: Xcode 16+, Swift 6, SwiftUI
 
@@ -39,26 +38,26 @@ Draggy に匹敵する精度（±0.05〜0.1 秒）を目標とするネイティ
 
 ```bash
 # CLIビルド（シミュレーター）
-xcodebuild -project AccelTimer.xcodeproj \
-           -scheme AccelTimer \
+xcodebuild -project AccelTimerNeo.xcodeproj \
+           -scheme AccelTimerNeo \
            -destination 'platform=iOS Simulator,name=iPhone 17 Pro Max' \
            build
 
 # CLIビルド（実機・要 -allowProvisioningUpdates）
-xcodebuild -project AccelTimer.xcodeproj \
-           -scheme AccelTimer \
+xcodebuild -project AccelTimerNeo.xcodeproj \
+           -scheme AccelTimerNeo \
            -destination 'platform=iOS,name=<デバイス名>' \
            -allowProvisioningUpdates \
            build
 
-# テスト実行（テストは AccelTimer スキームの TestAction に含まれる）
-xcodebuild -project AccelTimer.xcodeproj \
-           -scheme AccelTimer \
+# テスト実行（テストは AccelTimerNeo スキームの TestAction に含まれる）
+xcodebuild -project AccelTimerNeo.xcodeproj \
+           -scheme AccelTimerNeo \
            -destination 'platform=iOS Simulator,name=iPhone 17 Pro Max' \
            test
 
 # 単一テストクラス
-xcodebuild -project AccelTimer.xcodeproj -scheme AccelTimer \
+xcodebuild -project AccelTimerNeo.xcodeproj -scheme AccelTimerNeo \
            -destination 'platform=iOS Simulator,name=iPhone 17 Pro Max' \
            test -only-testing:AccelTimerTests/<TestClassName>
 

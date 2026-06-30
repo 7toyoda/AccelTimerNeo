@@ -1,5 +1,5 @@
 import XCTest
-@testable import AccelTimer
+@testable import AccelTimerNeo
 
 /// トライアル課金モデル（累計30回 + 以後1日1回）の回帰テスト。
 @MainActor

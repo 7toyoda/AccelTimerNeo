@@ -1,5 +1,5 @@
 import XCTest
-@testable import AccelTimer
+@testable import AccelTimerNeo
 
 /// 実走ログ(debug.csv)から切り出した「録画サンプル列」をそのまま判定ロジックへ通すリプレイテスト。
 ///

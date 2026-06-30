@@ -1,5 +1,5 @@
 import XCTest
-@testable import AccelTimer
+@testable import AccelTimerNeo
 
 /// 計測ロジックの中核である「速度しきい値クロス時刻の線形補間」を検証する。
 /// `TimerEngine.interpolatedCrossTime` はセンサー状態に依存しない純粋関数のため、

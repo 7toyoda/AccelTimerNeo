@@ -1,5 +1,5 @@
 import XCTest
-@testable import AccelTimer
+@testable import AccelTimerNeo
 
 /// ARMED 発進検出の中核ロジックを純粋関数として検証する。
 /// `shouldConfirmStopped` / `shouldAbortFalseLaunch` / `updateArmedLaunch` は

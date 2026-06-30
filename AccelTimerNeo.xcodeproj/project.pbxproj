@@ -129,7 +129,7 @@
 			name = AccelTimerNeoTests;
 			packageProductDependencies = (
 			);
-			productName = AccelTimerTests;
+			productName = AccelTimerNeoTests;
 			productReference = AC7E000000000000000000A2 /* AccelTimerNeoTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
@@ -423,7 +423,7 @@
 				DEVELOPMENT_TEAM = L997D8UHF6;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.acceltimer.app.AccelTimerTests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.acceltimer.app.AccelTimerNeoTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
@@ -440,7 +440,7 @@
 				DEVELOPMENT_TEAM = L997D8UHF6;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.acceltimer.app.AccelTimerTests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.acceltimer.app.AccelTimerNeoTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
