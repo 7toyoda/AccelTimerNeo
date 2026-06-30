@@ -125,7 +125,7 @@ subText.draw(in: subRect, withAttributes: subAttrs)
 image.unlockFocus()
 
 // PNG 書き出し
-let outPath = "/Users/user01/dev/AccelTimer/icon_1024.png"
+let outPath = "/Users/user01/dev/AccelTimerNeo/icon_1024.png"
 if let tiff = image.tiffRepresentation,
    let rep  = NSBitmapImageRep(data: tiff),
    let png  = rep.representation(using: .png, properties: [:]) {

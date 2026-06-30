@@ -23,7 +23,7 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		594BB02C2FC1A40E0009A57F /* Exceptions for "AccelTimer" folder in "AccelTimerNeo" target */ = {
+		594BB02C2FC1A40E0009A57F /* Exceptions for "AccelTimerNeo" folder in "AccelTimerNeo" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
@@ -36,9 +36,9 @@
 		594BB0032FC162D00009A57F /* AccelTimer */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				594BB02C2FC1A40E0009A57F /* Exceptions for "AccelTimer" folder in "AccelTimerNeo" target */,
+				594BB02C2FC1A40E0009A57F /* Exceptions for "AccelTimerNeo" folder in "AccelTimerNeo" target */,
 			);
-			path = AccelTimer;
+			path = AccelTimerNeo;
 			sourceTree = "<group>";
 		};
 		AC7E000000000000000000A6 /* AccelTimerTests */ = {
@@ -348,7 +348,7 @@
 				DEVELOPMENT_TEAM = L997D8UHF6;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = AccelTimer/Info.plist;
+				INFOPLIST_FILE = AccelTimerNeo/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = AccelTimerNeo;
 				INFOPLIST_KEY_CFBundleName = "$(ACCELTIMER_APP_DISPLAY_NAME)";
 				INFOPLIST_KEY_NSCameraUsageDescription = "計測中の走行映像を録画するために使用します";
@@ -386,7 +386,7 @@
 				DEVELOPMENT_TEAM = L997D8UHF6;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = AccelTimer/Info.plist;
+				INFOPLIST_FILE = AccelTimerNeo/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = AccelTimerNeo;
 				INFOPLIST_KEY_CFBundleName = "$(ACCELTIMER_APP_DISPLAY_NAME)";
 				INFOPLIST_KEY_NSCameraUsageDescription = "計測中の走行映像を録画するために使用します";

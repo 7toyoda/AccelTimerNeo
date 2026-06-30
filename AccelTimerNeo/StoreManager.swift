@@ -9,7 +9,7 @@ import StoreKit
 final class StoreManager {
     /// App Store Connect で登録する非消費型プロダクト ID。
     static var unlockProductID: String {
-        let bundleID = Bundle.main.bundleIdentifier ?? "com.acceltimer.app.AccelTimer"
+        let bundleID = Bundle.main.bundleIdentifier ?? "com.acceltimer.app.AccelTimerNeo"
         return "\(bundleID).unlock"
     }
     /// 無料で完走できる累計回数。これを超えると「1日1回」のみ無料。

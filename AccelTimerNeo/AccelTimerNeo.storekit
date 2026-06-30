@@ -18,28 +18,8 @@
           "locale": "en_US"
         }
       ],
-      "productID": "com.acceltimer.app.AccelTimer.unlock",
-      "referenceName": "Full Unlock",
-      "type": "NonConsumable"
-    },
-    {
-      "displayPrice": "800",
-      "familyShareable": false,
-      "internalID": "ATX0001",
-      "localizations": [
-        {
-          "description": "全機能を永久に解放します",
-          "displayName": "全機能解放",
-          "locale": "ja_JP"
-        },
-        {
-          "description": "Unlock all features permanently",
-          "displayName": "Full Unlock",
-          "locale": "en_US"
-        }
-      ],
-      "productID": "com.acceltimer.app.AccelTimerX.unlock",
-      "referenceName": "Full Unlock X",
+      "productID": "com.acceltimer.app.AccelTimerNeo.unlock",
+      "referenceName": "Full Unlock Neo",
       "type": "NonConsumable"
     }
   ],
