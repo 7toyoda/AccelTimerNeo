@@ -7,7 +7,7 @@ import XCTest
 /// これにより「走る→ログ共有→修正→7日ごと再インストール→また走る」という人力ループを断つ。
 ///
 /// 新しいログで問題を見つけたら、その区間を `ReplaySample` 配列として下の Fixtures に追加するだけで、
-/// 以降は `xcodebuild test -only-testing:AccelTimerTests`（シミュレーター・数秒）で永久に回帰検証される。
+/// 以降は `xcodebuild test -only-testing:AccelTimerNeoTests`（シミュレーター・数秒）で永久に回帰検証される。
 /// 同じ現象で二度と走らなくてよい。
 ///
 /// 抽出方法（debug.csv の ARMED 行）：

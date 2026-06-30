@@ -33,7 +33,7 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		594BB0032FC162D00009A57F /* AccelTimer */ = {
+		594BB0032FC162D00009A57F /* AccelTimerNeo */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				594BB02C2FC1A40E0009A57F /* Exceptions for "AccelTimerNeo" folder in "AccelTimerNeo" target */,
@@ -41,9 +41,9 @@
 			path = AccelTimerNeo;
 			sourceTree = "<group>";
 		};
-		AC7E000000000000000000A6 /* AccelTimerTests */ = {
+		AC7E000000000000000000A6 /* AccelTimerNeoTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = AccelTimerTests;
+			path = AccelTimerNeoTests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -70,8 +70,8 @@
 			isa = PBXGroup;
 			children = (
 				ACC0F1600000000000000001 /* Config/Version.xcconfig */,
-				594BB0032FC162D00009A57F /* AccelTimer */,
-				AC7E000000000000000000A6 /* AccelTimerTests */,
+				594BB0032FC162D00009A57F /* AccelTimerNeo */,
+				AC7E000000000000000000A6 /* AccelTimerNeoTests */,
 				594BB0022FC162D00009A57F /* Products */,
 			);
 			sourceTree = "<group>";
@@ -101,7 +101,7 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				594BB0032FC162D00009A57F /* AccelTimer */,
+				594BB0032FC162D00009A57F /* AccelTimerNeo */,
 			);
 			name = AccelTimerNeo;
 			packageProductDependencies = (
@@ -124,7 +124,7 @@
 				AC7E000000000000000000B1 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				AC7E000000000000000000A6 /* AccelTimerTests */,
+				AC7E000000000000000000A6 /* AccelTimerNeoTests */,
 			);
 			name = AccelTimerNeoTests;
 			packageProductDependencies = (

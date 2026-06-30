@@ -59,7 +59,7 @@ xcodebuild -project AccelTimerNeo.xcodeproj \
 # 単一テストクラス
 xcodebuild -project AccelTimerNeo.xcodeproj -scheme AccelTimerNeo \
            -destination 'platform=iOS Simulator,name=iPhone 17 Pro Max' \
-           test -only-testing:AccelTimerTests/<TestClassName>
+           test -only-testing:AccelTimerNeoTests/<TestClassName>
 
 # SwiftLint（導入済みの場合）
 swiftlint lint --strict
